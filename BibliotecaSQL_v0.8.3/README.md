@@ -1,4 +1,4 @@
-# BibliotecaSQL v0.8.2
+# BibliotecaSQL v0.8.3
 
 Aplicación didáctica de gestión bibliotecaria con Java 17, JDBC, PostgreSQL, Docker Compose y una interfaz clásica de texto mediante Lanterna.
 
@@ -66,3 +66,8 @@ sustituyen el análisis del plan de ejecución.
 ## Modo didáctico 0.8.2
 
 Las teclas `1`, `2`, `3` y `4` muestran SQL, el código Java real cercano a la llamada JDBC, su explicación SQL y una guía de lectura Java. Para cargar el archivo de origen, ejecute Maven desde la raíz del repositorio. Consulte `docs/13-lectura-sql-y-java.md`.
+
+
+## Navegación y desplazamiento (v0.8.3)
+
+En tablas y vistas didácticas se muestra un apuntador `▶` y una barra lateral. Use las flechas ↑ y ↓ para desplazarse por las filas, Page Up y Page Down para avanzar por páginas, y Home o End para ir al principio o final. En el visor didáctico el indicador señala la primera línea visible y la barra lateral muestra la posición dentro del documento. En las tablas el apuntador identifica el registro seleccionado.

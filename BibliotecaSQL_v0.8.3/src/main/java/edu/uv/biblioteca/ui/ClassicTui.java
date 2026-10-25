@@ -90,7 +90,7 @@ public final class ClassicTui implements AutoCloseable {
             center(height / 2 - 3, "╚██╗ ██╔╝╚██╗ ██╔╝", YELLOW);
             center(height / 2 - 2, " ╚████╔╝  ╚████╔╝ ", YELLOW);
             center(height / 2 - 1, "  ╚═══╝    ╚═══╝  ", YELLOW);
-            center(height / 2 + 1, "BIBLIOTECASQL  |  v0.8.2", WHITE);
+            center(height / 2 + 1, "BIBLIOTECASQL  |  v0.8.3", WHITE);
             center(height / 2 + 3, "Ingeniería de Software · Bases de Datos", CYAN);
             center(height / 2 + 5, "Monograma tipográfico, no escudo oficial", GREY);
             screen.refresh();
@@ -142,7 +142,7 @@ public final class ClassicTui implements AutoCloseable {
             line(3, 3, "Filtro: " + (searching ? "[" + search + "_]" : search.isEmpty() ? "(sin filtro)" : search), YELLOW);
             line(3, 4, "Modo: " + (sqlMode ? "PostgreSQL (ILIKE)" : "Java (memoria)") +
                 "     Coincidencias: " + filtered.size() + "/" + complete.size(), CYAN);
-            int visible = Math.max(1, height - 11);
+            int visible = Math.max(1, height - 12);
             if (selected < offset) offset = selected;
             if (selected >= offset + visible) offset = selected - visible + 1;
             line(3, 6, fit(String.format("%-5s %-" + Math.max(8, width - 37) + "s %-12s %s", "ID", "TÍTULO", "CATEGORÍA", "ESTADO"), width - 6), YELLOW);
@@ -154,6 +154,9 @@ public final class ClassicTui implements AutoCloseable {
                 line(3, 8 + i - offset, (i == selected ? ">" : " ") + fit(row, width - 7),
                     i == selected ? YELLOW : WHITE);
             }
+            line(3, height - 3, "Libro " + (filtered.isEmpty() ? 0 : selected + 1) + "/" + filtered.size()
+                + "  ↑↓ Mover  PgUp/PgDn Página", CYAN);
+            scrollMarker(width - 4, 8, visible, filtered.size(), offset);
             if (!error.isEmpty()) line(3, height - 3, error, YELLOW);
             screen.refresh();
             KeyStroke key = nextKey();
@@ -276,23 +279,31 @@ public final class ClassicTui implements AutoCloseable {
         String search = "";
         boolean editing = false;
         int offset = 0;
+        int selected = 0;
         while (true) {
             List<List<String>> filtered = filterRows(rows, search);
             frame(title, teaching ? "1 / Buscar   3 Ver SQL   ↑↓ Desplazar   0 Volver"
                 : "1 / Buscar   ↑↓ Desplazar   0 Volver");
             line(3, 3, "Buscar: " + (editing ? "[" + search + "_]" : search.isEmpty() ? "(todos)" : search)
                 + "    Coincidencias: " + filtered.size() + "/" + rows.size(), CYAN);
-            int colWidth = Math.max(8, (width - 8) / Math.max(1, columns.size()));
+            int colWidth = Math.max(8, (width - 10) / Math.max(1, columns.size()));
             for (int c = 0; c < columns.size(); c++) line(3 + c * colWidth, 4, fit(columns.get(c), colWidth - 1), YELLOW);
             horizontal(3, 5, width - 6);
             int page = Math.max(1, height - 9);
+            selected = Math.min(selected, Math.max(0, filtered.size() - 1));
+            if (selected < offset) offset = selected;
+            if (selected >= offset + page) offset = selected - page + 1;
             offset = Math.min(offset, Math.max(0, filtered.size() - page));
             for (int i = offset; i < filtered.size() && i < offset + page; i++) {
                 List<String> values = filtered.get(i);
                 for (int c = 0; c < Math.min(columns.size(), values.size()); c++)
-                    line(3 + c * colWidth, 6 + i - offset, fit(values.get(c), colWidth - 1), WHITE);
+                    line(5 + c * colWidth, 6 + i - offset, fit(values.get(c), Math.max(1, colWidth - 2)),
+                        i == selected ? YELLOW : WHITE);
+                line(3, 6 + i - offset, i == selected ? "▶" : " ", YELLOW);
             }
-            line(3, height - 3, "Registros: " + filtered.size() + " | Página: " + (offset / page + 1), CYAN);
+            line(3, height - 3, "Registro: " + (filtered.isEmpty() ? 0 : selected + 1)
+                + "/" + filtered.size() + "  |  ↑↓ Seleccionar  PgUp/PgDn Página", CYAN);
+            scrollMarker(width - 4, 6, page, filtered.size(), offset);
             screen.refresh();
             KeyStroke key = nextKey();
             if (key == null) continue;
@@ -308,13 +319,16 @@ public final class ClassicTui implements AutoCloseable {
                 else if (type == KeyType.Character && !Character.isISOControl(ch) && search.length() < 80) search += ch;
                 else continue;
                 offset = 0;
+                selected = 0;
             } else if (ch == '0') return;
             else if (ch == '1' || ch == '/') { editing = true; continue; }
             else if (ch == '3' && teaching) { sqlWindow(title); continue; }
-            else if (type == KeyType.ArrowDown) offset = Math.min(Math.max(0, filtered.size() - page), offset + 1);
-            else if (type == KeyType.ArrowUp) offset = Math.max(0, offset - 1);
-            else if (type == KeyType.PageDown) offset = Math.min(Math.max(0, filtered.size() - page), offset + page);
-            else if (type == KeyType.PageUp) offset = Math.max(0, offset - page);
+            else if (type == KeyType.ArrowDown) selected = Math.min(filtered.size() - 1, selected + 1);
+            else if (type == KeyType.ArrowUp) selected = Math.max(0, selected - 1);
+            else if (type == KeyType.PageDown) selected = Math.min(filtered.size() - 1, selected + page);
+            else if (type == KeyType.PageUp) selected = Math.max(0, selected - page);
+            else if (type == KeyType.Home) selected = 0;
+            else if (type == KeyType.End) selected = Math.max(0, filtered.size() - 1);
         }
     }
 
@@ -400,14 +414,19 @@ public final class ClassicTui implements AutoCloseable {
                 line(3, y, "│", WHITE);
                 line(width - 4, y, "│", WHITE);
             }
-            int capacity = Math.max(1, height - 10);
+            int capacity = Math.max(1, height - 9);
             scroll = Math.min(scroll, Math.max(0, lines.size() - capacity));
             for (int i = 0; i < capacity && i + scroll < lines.size(); i++) {
                 String row = lines.get(i + scroll);
+                line(4, 5 + i, i == 0 ? "▶" : " ", YELLOW);
                 if (view == 1) coloredSqlLine(5, 5 + i, row);
                 else if (view == 2) coloredJavaLine(5, 5 + i, row);
                 else line(5, 5 + i, row, WHITE);
             }
+            line(4, height - 3, "Líneas " + (lines.isEmpty() ? 0 : scroll + 1) + "–"
+                + Math.min(lines.size(), scroll + capacity) + "/" + lines.size()
+                + "  ↑↓ Desplazar  PgUp/PgDn Página  Inicio/Fin", CYAN);
+            scrollMarker(width - 5, 5, capacity, lines.size(), scroll);
             screen.refresh();
             KeyStroke key = nextKey();
             if (key == null) continue;
@@ -418,6 +437,8 @@ public final class ClassicTui implements AutoCloseable {
             if (type == KeyType.ArrowDown) scroll = Math.min(Math.max(0, lines.size() - capacity), scroll + 1);
             if (type == KeyType.PageUp) scroll = Math.max(0, scroll - capacity);
             if (type == KeyType.PageDown) scroll = Math.min(Math.max(0, lines.size() - capacity), scroll + capacity);
+            if (type == KeyType.Home) scroll = 0;
+            if (type == KeyType.End) scroll = Math.max(0, lines.size() - capacity);
             if (type == KeyType.ArrowLeft) { current = Math.max(0, current - 1); scroll = 0; }
             if (type == KeyType.ArrowRight) { current = Math.min(entries.size() - 1, current + 1); scroll = 0; }
             if (ch >= '1' && ch <= '4') { view = ch - '0'; scroll = 0; }
@@ -506,6 +527,18 @@ public final class ClassicTui implements AutoCloseable {
         // Mostramos el estado para que sea evidente cuándo se puede consultar el SQL.
         if (teaching && height >= 5) {
             line(Math.max(2, width - 22), 1, "DIDÁCTICO ACTIVO", CYAN);
+        }
+    }
+
+    // Dibujamos una barra lateral para indicar qué parte del contenido estamos leyendo.
+    private void scrollMarker(int x, int y, int visible, int total, int offset) {
+        if (total <= visible || visible < 2) return;
+        int thumb = Math.max(1, (int) Math.round((double) visible * visible / total));
+        int travel = Math.max(0, visible - thumb);
+        int position = (int) Math.round((double) offset * travel / Math.max(1, total - visible));
+        for (int i = 0; i < visible && y + i < height - 4; i++) {
+            line(x, y + i, i >= position && i < position + thumb ? "█" : "░",
+                i >= position && i < position + thumb ? YELLOW : GREY);
         }
     }
 
