@@ -1,4 +1,4 @@
-# BibliotecaSQL v9.0.1
+# BibliotecaSQL v9.0.2
 
 Aplicación didáctica Java 17 + PostgreSQL + JDBC + Lanterna, Universidad Veracruzana.
 
@@ -14,7 +14,7 @@ Aplicación didáctica Java 17 + PostgreSQL + JDBC + Lanterna, Universidad Verac
 - `biblioteca_universitaria` conserva el esquema original y sus 24 libros para reproducir A7–A9.
 - Las 21 consultas del laboratorio se ejecutan en `biblioteca_operativa` usando la vista `libros_consulta`; es un esquema de lectura equivalente, no idéntico al esquema original.
 
-## Ajuste v9.0.1
+## Ajuste v9.0.2
 
 - Ventanas emergentes navegables para elegir o registrar categoría y editorial durante el alta o modificación de libros.
 - `ESC` cancela la selección; un valor nuevo solo se almacena al confirmar el libro.
@@ -62,3 +62,12 @@ docker compose exec postgres psql -U admin -d biblioteca_universitaria -c "SELEC
 ## Estado de validación
 
 El código fuente compiló mediante `javac --release 17` con clases auxiliares de la API de Lanterna. No se ha realizado aún un ensayo integral con Docker/PostgreSQL y Lanterna reales. La migración debe probarse con respaldo antes de utilizarla con datos importantes.
+
+
+## Cambios de la versión 9.0.2
+
+- Catálogo de libros: se reduce el ancho del título y se reserva espacio para mostrar categoría. La opción 2 se llama **Cambiar filtro** y alterna entre búsqueda en Java (memoria) y PostgreSQL (ILIKE).
+- Autores, categorías y editoriales: tablas con búsqueda incremental (`1` o `/`), cursor `▶`, navegación, detalle con ENTER, alta (`4`), modificación (`5`) y eliminación (`6`).
+- Préstamos activos: tabla con búsqueda y acceso a registrar (`4`), modificar fecha (`5`), devolver (`6`) y cancelar (`7`).
+- Los identificadores se obtienen internamente de la fila seleccionada. Las confirmaciones y restricciones SQL se conservan.
+- La base académica y el esquema operativo no cambian; esta versión no necesita migración.

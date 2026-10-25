@@ -153,20 +153,20 @@ public final class ClassicTui implements AutoCloseable {
         String error = "";
         while (true) {
             frame("CATÁLOGO DE LIBROS", teaching
-                ? "1 Buscar  2 Java/SQL  3 SQL  4 Alta  5 Editar  6 Borrar  0 Volver"
-                : "1 Buscar  2 Java/SQL  4 Alta  5 Editar  6 Borrar  0 Volver");
+                ? "1 Buscar  2 Cambiar filtro  3 SQL  4 Alta  5 Editar  6 Borrar  0 Volver"
+                : "1 Buscar  2 Cambiar filtro  4 Alta  5 Editar  6 Borrar  0 Volver");
             line(3, 3, "Filtro: " + (searching ? "[" + search + "_]" : search.isEmpty() ? "(sin filtro)" : search), YELLOW);
-            line(3, 4, "Modo: " + (sqlMode ? "PostgreSQL (ILIKE)" : "Java (memoria)") +
+            line(3, 4, "Búsqueda: " + (sqlMode ? "PostgreSQL / ILIKE" : "Java / en memoria") +
                 "     Coincidencias: " + filtered.size() + "/" + complete.size(), CYAN);
             int visible = Math.max(1, height - 12);
             if (selected < offset) offset = selected;
             if (selected >= offset + visible) offset = selected - visible + 1;
-            line(3, 6, fit(String.format("%-5s %-" + Math.max(8, width - 37) + "s %-12s %s", "ID", "TÍTULO", "CATEGORÍA", "ESTADO"), width - 6), YELLOW);
+            line(3, 6, fit(String.format("%-5s %-" + Math.max(12, Math.min(46, width - 47)) + "s %-20s %s", "ID", "TÍTULO", "CATEGORÍA", "ESTADO"), width - 6), YELLOW);
             horizontal(3, 7, width - 6);
             for (int i = offset; i < filtered.size() && i < offset + visible; i++) {
                 Book b = filtered.get(i);
-                String row = String.format("%-5d %-" + Math.max(8, width - 37) + "s %-12s %s",
-                    b.id(), fit(b.title(), Math.max(8, width - 37)), fit(b.category(), 12), b.available() ? "SÍ" : "NO");
+                String row = String.format("%-5d %-" + Math.max(12, Math.min(46, width - 47)) + "s %-20s %s",
+                    b.id(), fit(b.title(), Math.max(12, Math.min(46, width - 47))), fit(b.category(), 20), b.available() ? "SÍ" : "NO");
                 line(3, 8 + i - offset, (i == selected ? ">" : " ") + fit(row, width - 7),
                     i == selected ? YELLOW : WHITE);
             }
@@ -328,44 +328,49 @@ public final class ClassicTui implements AutoCloseable {
         }
     }
 
-    // Permitimos consultar, modificar el plazo o cancelar préstamos abiertos.
+    // Mostramos los préstamos activos en una tabla con las operaciones a la vista.
     private void manageLoans() throws IOException, SQLException {
         while (true) {
             List<Loan> loans = service.activeLoans();
-            int choice = choose("PRÉSTAMOS ACTIVOS", loans.stream()
-                    .map(l -> l.title() + " | " + l.user() + " | " + l.dueDate()).toList());
-            if (choice < 0) return;
-            Loan selectedLoan = loans.get(choice);
-            int action = menu("GESTIÓN DEL PRÉSTAMO", new String[]{
-                    "Consultar detalles", "Modificar fecha límite", "Registrar devolución", "Cancelar préstamo"},
-                    "1-4 Elegir   0 Volver");
-            if (action == 1) {
-                message("DETALLE DEL PRÉSTAMO", selectedLoan.user() + " | " + selectedLoan.title()
-                        + " | Fecha límite: " + selectedLoan.dueDate());
-            } else if (action == 2) {
-                String value = modalInput("MODIFICAR PLAZO", "Fecha límite AAAA-MM-DD", selectedLoan.dueDate().toString(), 10);
+            List<List<String>> rows = new ArrayList<>();
+            for (Loan loan : loans) {
+                rows.add(List.of(String.valueOf(loan.id()), loan.user(),
+                        loan.title(), loan.dueDate().toString()));
+            }
+            TableAction choice = catalogTable("PRÉSTAMOS ACTIVOS",
+                    List.of("ID", "USUARIO", "LIBRO", "FECHA LÍMITE"), rows,
+                    "4 Nuevo  5 Cambiar fecha  6 Devolver  7 Cancelar  0 Volver", true);
+            if (choice.action() == 0) return;
+            if (choice.action() == 4) { borrow(); continue; }
+            if (choice.index() < 0) continue;
+            Loan loan = loans.get(choice.index());
+            if (choice.action() == 1) {
+                message("DETALLE DEL PRÉSTAMO", loan.user() + " | " + loan.title()
+                        + " | Fecha límite: " + loan.dueDate());
+            } else if (choice.action() == 5) {
+                String value = modalInput("MODIFICAR PLAZO", "Fecha límite AAAA-MM-DD",
+                        loan.dueDate().toString(), 10);
                 if (value == null) continue;
                 try {
-                    LocalDate date = LocalDate.parse(value);
-                    service.changeDueDate(selectedLoan.id(), date);
+                    service.changeDueDate(loan.id(), LocalDate.parse(value));
                     message("OPERACIÓN CORRECTA", "La fecha límite se actualizó correctamente.");
                 } catch (java.time.format.DateTimeParseException ex) {
                     message("DATO INCORRECTO", "Utilice el formato AAAA-MM-DD.");
                 } catch (SQLException | IllegalArgumentException ex) {
                     showFailure("No se pudo modificar el préstamo", ex);
                 }
-            } else if (action == 3) {
-                if (!confirm("CONFIRMAR DEVOLUCIÓN", "¿Registrar la devolución?")) continue;
+            } else if (choice.action() == 6) {
+                if (!confirm("CONFIRMAR DEVOLUCIÓN", "¿Registrar la devolución del libro?")) continue;
                 try {
-                    service.returnBook(selectedLoan.id());
-                    message("OPERACIÓN CORRECTA", "Devolución registrada correctamente.");
+                    service.returnBook(loan.id());
+                    message("OPERACIÓN CORRECTA", "La devolución se registró correctamente.");
                 } catch (SQLException | IllegalArgumentException ex) {
                     showFailure("No se pudo registrar la devolución", ex);
                 }
-            } else if (action == 4) {
-                if (!confirm("CANCELAR PRÉSTAMO", "¿Cancelar este préstamo activo?")) continue;
+            } else if (choice.action() == 7) {
+                if (!confirm("CANCELAR PRÉSTAMO", "¿Cancelar el préstamo seleccionado?")) continue;
                 try {
-                    service.cancelLoan(selectedLoan.id());
+                    service.cancelLoan(loan.id());
                     message("OPERACIÓN CORRECTA", "Préstamo cancelado; libro disponible nuevamente.");
                 } catch (SQLException | IllegalArgumentException ex) {
                     showFailure("No se pudo cancelar el préstamo", ex);
@@ -387,17 +392,19 @@ public final class ClassicTui implements AutoCloseable {
         }
     }
 
-    // Mostramos altas, cambios y bajas con una selección por nombre.
+    // Presentamos cada catálogo en una tabla navegable con las mismas teclas del catálogo de libros.
     private void manageControlledCatalog(CatalogDao.Type type) throws IOException, SQLException {
         String title = type == CatalogDao.Type.CATEGORY ? "CATEGORÍAS" : "EDITORIALES";
         while (true) {
             List<CatalogEntry> entries = service.catalog(type);
-            List<String> options = new ArrayList<>();
-            options.add("+ Registrar " + (type == CatalogDao.Type.CATEGORY ? "categoría" : "editorial"));
-            for (CatalogEntry entry : entries) options.add(entry.name());
-            int selected = choose(title, options);
-            if (selected < 0) return;
-            if (selected == 0) {
+            List<List<String>> rows = new ArrayList<>();
+            for (CatalogEntry entry : entries) {
+                rows.add(List.of(String.valueOf(entry.id()), entry.name()));
+            }
+            TableAction action = catalogTable(title, List.of("ID", "NOMBRE"), rows,
+                    "4 Agregar  5 Modificar  6 Eliminar  0 Volver", false);
+            if (action.action() == 0) return;
+            if (action.action() == 4) {
                 String name = modalInput("AGREGAR " + title, "Nombre", "", 100);
                 if (name == null || !confirm("CONFIRMAR ALTA", "¿Guardar el nuevo valor?")) continue;
                 try {
@@ -408,24 +415,23 @@ public final class ClassicTui implements AutoCloseable {
                 }
                 continue;
             }
-            CatalogEntry current = entries.get(selected - 1);
-            int action = menu(title + ": " + current.name(),
-                    new String[]{"Consultar datos", "Modificar", "Eliminar"},
-                    "1 Consultar  2 Modificar  3 Eliminar  0 Volver");
-            if (action == 1) message(title, current.name());
-            if (action == 2) {
-                String name = modalInput("MODIFICAR " + title, "Nombre", current.name(), 100);
+            if (action.index() < 0) continue;
+            CatalogEntry entry = entries.get(action.index());
+            if (action.action() == 1) {
+                message("DETALLE DE " + title, "ID: " + entry.id() + " | Nombre: " + entry.name());
+            } else if (action.action() == 5) {
+                String name = modalInput("MODIFICAR " + title, "Nombre", entry.name(), 100);
                 if (name == null || !confirm("CONFIRMAR CAMBIO", "¿Guardar los cambios?")) continue;
                 try {
-                    service.updateCatalog(type, current.id(), name);
+                    service.updateCatalog(type, entry.id(), name);
                     message("OPERACIÓN CORRECTA", "Valor actualizado correctamente.");
                 } catch (SQLException | IllegalArgumentException ex) {
                     showFailure("No se pudo modificar el valor", ex);
                 }
-            }
-            if (action == 3 && confirm("ELIMINAR " + title, "¿Eliminar «" + current.name() + "»?")) {
+            } else if (action.action() == 6) {
+                if (!confirm("ELIMINAR " + title, "¿Eliminar «" + entry.name() + "»?")) continue;
                 try {
-                    service.deleteCatalog(type, current.id());
+                    service.deleteCatalog(type, entry.id());
                     message("OPERACIÓN CORRECTA", "Valor eliminado correctamente.");
                 } catch (SQLException | IllegalArgumentException ex) {
                     showFailure("No se pudo eliminar: puede tener libros asociados", ex);
@@ -434,35 +440,29 @@ public final class ClassicTui implements AutoCloseable {
         }
     }
 
-    // Mostramos el catálogo de autores con el mismo selector que se utiliza en los libros.
+    // Usamos el mismo componente para buscar, seleccionar y administrar autores.
     private void manageAuthors() throws IOException, SQLException {
         while (true) {
             List<AuthorDetails> authors = service.authorCatalog();
-            List<String> options = new ArrayList<>();
-            options.add("+ Agregar autor");
+            List<List<String>> rows = new ArrayList<>();
             for (AuthorDetails author : authors) {
-                options.add(author.name() + "  |  "
-                        + (author.nationality() == null ? "Sin nacionalidad" : author.nationality()));
+                rows.add(List.of(String.valueOf(author.id()), author.name(),
+                        author.nationality() == null ? "Sin especificar" : author.nationality()));
             }
-
-            int selected = choose("CATÁLOGO DE AUTORES", options);
-            if (selected < 0) return;
-            if (selected == 0) {
-                editAuthor(null);
-                continue;
-            }
-
-            AuthorDetails author = authors.get(selected - 1);
-            int operation = menu("AUTOR: " + author.name(),
-                    new String[]{"Consultar datos", "Modificar autor", "Eliminar autor"},
-                    "1 Consultar   2 Modificar   3 Eliminar   0 Volver");
-            if (operation == 1) {
+            TableAction action = catalogTable("CATÁLOGO DE AUTORES",
+                    List.of("ID", "NOMBRE", "NACIONALIDAD"), rows,
+                    "4 Agregar  5 Modificar  6 Eliminar  0 Volver", false);
+            if (action.action() == 0) return;
+            if (action.action() == 4) { editAuthor(null); continue; }
+            if (action.index() < 0) continue;
+            AuthorDetails author = authors.get(action.index());
+            if (action.action() == 1) {
                 message("DETALLE DEL AUTOR", "Nombre: " + author.name()
                         + " | Nacionalidad: " + (author.nationality() == null
                         ? "Sin especificar" : author.nationality()));
-            } else if (operation == 2) {
+            } else if (action.action() == 5) {
                 editAuthor(author);
-            } else if (operation == 3) {
+            } else if (action.action() == 6) {
                 if (!confirm("ELIMINAR AUTOR", "¿Eliminar a «" + author.name() + "»?")) continue;
                 try {
                     service.deleteAuthor(author.id());
@@ -761,6 +761,107 @@ public final class ClassicTui implements AutoCloseable {
             if (id <= 0) throw new NumberFormatException();
             return id;
         } catch (NumberFormatException ex) { throw new IllegalArgumentException("Escriba un identificador positivo."); }
+    }
+
+    // Conservamos el índice original para que la búsqueda no modifique el registro elegido.
+    private record TableAction(int action, int index) { }
+
+    // Dibujamos las columnas, el registro activo y una barra que indica la posición.
+    // ENTER consulta; los números ejecutan las mismas acciones en todos los catálogos.
+    private TableAction catalogTable(String title, List<String> columns,
+            List<List<String>> rows, String help, boolean loans) throws IOException {
+        int selected = 0;
+        int offset = 0;
+        String search = "";
+        boolean searching = false;
+        while (true) {
+            List<Integer> matches = new ArrayList<>();
+            for (int i = 0; i < rows.size(); i++) {
+                if (filterRows(List.of(rows.get(i)), search).size() > 0) matches.add(i);
+            }
+            selected = Math.max(0, Math.min(selected, matches.size() - 1));
+            int page = Math.max(1, height - 10);
+            if (selected < offset) offset = selected;
+            if (selected >= offset + page) offset = selected - page + 1;
+            offset = Math.min(offset, Math.max(0, matches.size() - page));
+            frame(title, "1 / Buscar   " + help);
+            line(3, 3, "Buscar: " + (searching ? "[" + search + "_]" : search.isEmpty() ? "(todos)" : search)
+                    + "     Coincidencias: " + matches.size() + "/" + rows.size(), CYAN);
+            int usable = Math.max(24, width - 10);
+            int[] widths = columnWidths(columns, rows, usable);
+            int x = 5;
+            for (int c = 0; c < columns.size(); c++) {
+                line(x, 5, fit(columns.get(c), widths[c] - 1), YELLOW);
+                x += widths[c];
+            }
+            horizontal(3, 6, width - 7);
+            for (int i = offset; i < matches.size() && i < offset + page; i++) {
+                int y = 7 + i - offset;
+                List<String> values = rows.get(matches.get(i));
+                line(3, y, i == selected ? "▶" : " ", YELLOW);
+                x = 5;
+                for (int c = 0; c < Math.min(values.size(), widths.length); c++) {
+                    line(x, y, fit(values.get(c), widths[c] - 1), i == selected ? YELLOW : WHITE);
+                    x += widths[c];
+                }
+            }
+            line(3, height - 3, "Registro " + (matches.isEmpty() ? 0 : selected + 1)
+                    + "/" + matches.size() + "  ↑↓ Mover  PgUp/PgDn Página  ENTER Detalle", CYAN);
+            scrollMarker(width - 4, 7, page, matches.size(), offset);
+            screen.refresh();
+            KeyStroke key = nextKey();
+            if (key == null) continue;
+            KeyType type = key.getKeyType();
+            char ch = type == KeyType.Character ? key.getCharacter() : '\0';
+            if (type == KeyType.Escape) {
+                if (searching) searching = false;
+                else return new TableAction(0, -1);
+            } else if (searching) {
+                if (type == KeyType.Enter) searching = false;
+                else if (type == KeyType.Backspace && !search.isEmpty()) {
+                    search = search.substring(0, search.length() - 1);
+                    selected = offset = 0;
+                } else if (type == KeyType.Character && !Character.isISOControl(ch) && search.length() < 80) {
+                    search += ch;
+                    selected = offset = 0;
+                }
+            } else if (ch == '0') return new TableAction(0, -1);
+            else if (ch == '1' || ch == '/') searching = true;
+            else if (ch == '4') return new TableAction(4, -1);
+            else if ((ch == '5' || ch == '6' || (loans && ch == '7')) && !matches.isEmpty())
+                return new TableAction(ch - '0', matches.get(selected));
+            else if (type == KeyType.Enter && !matches.isEmpty())
+                return new TableAction(1, matches.get(selected));
+            else if (type == KeyType.ArrowDown) selected = Math.min(matches.size() - 1, selected + 1);
+            else if (type == KeyType.ArrowUp) selected = Math.max(0, selected - 1);
+            else if (type == KeyType.PageDown) selected = Math.min(matches.size() - 1, selected + page);
+            else if (type == KeyType.PageUp) selected = Math.max(0, selected - page);
+            else if (type == KeyType.Home) selected = 0;
+            else if (type == KeyType.End) selected = Math.max(0, matches.size() - 1);
+        }
+    }
+
+    // Reservamos más espacio para los campos largos, sin ocultar las últimas columnas.
+    private int[] columnWidths(List<String> columns, List<List<String>> rows, int available) {
+        int n = columns.size();
+        int[] widths = new int[n];
+        int total = 0;
+        for (int c = 0; c < n; c++) {
+            int longest = columns.get(c).length() + 2;
+            for (List<String> row : rows) {
+                if (c < row.size()) longest = Math.max(longest, row.get(c).length() + 2);
+            }
+            widths[c] = Math.max(6, Math.min(longest, 34));
+            total += widths[c];
+        }
+        while (total > available) {
+            int biggest = 0;
+            for (int c = 1; c < n; c++) if (widths[c] > widths[biggest]) biggest = c;
+            if (widths[biggest] <= 6) break;
+            widths[biggest]--;
+            total--;
+        }
+        return widths;
     }
 
     private void table(String title, List<String> columns, List<List<String>> rows) throws IOException {
