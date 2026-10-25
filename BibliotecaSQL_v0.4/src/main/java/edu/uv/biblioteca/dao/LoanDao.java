@@ -13,9 +13,11 @@ public final class LoanDao {
           + "FROM prestamos p JOIN libros l ON l.id_libro = p.id_libro "
           + "JOIN usuarios u ON u.id_usuario = p.id_usuario "
           + "WHERE p.fecha_devolucion_real IS NULL ORDER BY p.fecha_devolucion, p.id_prestamo";
+    // Guardamos la conexión recibida desde Main.
     private final Connection connection;
     public LoanDao(Connection connection) { this.connection = connection; }
     public List<Loan> active() throws SQLException {
+        // Creamos la lista donde almacenaremos las filas devueltas.
         List<Loan> loans = new ArrayList<>();
         try (PreparedStatement statement = connection.prepareStatement(ACTIVE_SQL);
              ResultSet rs = statement.executeQuery()) {

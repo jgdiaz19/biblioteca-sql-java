@@ -10,7 +10,9 @@ import java.util.Objects;
 
 /** Unidad transaccional para préstamos y devoluciones. No escribe en consola. */
 public final class LoanTransactionService {
+    // Establecemos el número máximo de préstamos abiertos por usuario.
     private static final int MAX_ACTIVE = 3;
+    // Definimos cuántos días tendrá el usuario para devolver el libro.
     private static final int LOAN_DAYS = 14;
     private final Connection connection;
 
@@ -129,12 +131,15 @@ public final class LoanTransactionService {
                 throw new IllegalArgumentException(
                         "Las modificaciones solo se permiten en biblioteca_operativa.");
         }
+        // Desactivamos la confirmación automática para agrupar los cambios.
         connection.setAutoCommit(false);
         try {
             T answer = work.run();
+            // Confirmamos los cambios cuando todas las operaciones terminan correctamente.
             connection.commit();
             return answer;
         } catch (SQLException | RuntimeException e) {
+            // Revertimos toda la operación si ocurre un error.
             try { connection.rollback(); } catch (SQLException rollbackError) { e.addSuppressed(rollbackError); }
             throw e;
         } finally {

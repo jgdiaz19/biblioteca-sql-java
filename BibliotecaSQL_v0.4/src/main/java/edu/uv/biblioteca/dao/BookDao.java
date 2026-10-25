@@ -16,6 +16,7 @@ public final class BookDao {
     public static final String STATS_SQL = "SELECT categoria, COUNT(*) AS total, "
             + "COUNT(*) FILTER (WHERE disponible) AS disponibles "
             + "FROM libros GROUP BY categoria ORDER BY categoria";
+    // Conservamos la conexión que utilizaremos para ejecutar las consultas.
     private final Connection connection;
     public BookDao(Connection connection) { this.connection = connection; }
 
@@ -24,6 +25,7 @@ public final class BookDao {
 
     private List<Book> query(String sql, String value) throws SQLException {
         List<Book> books = new ArrayList<>();
+        // Preparamos la sentencia y dejamos que JDBC cierre sus recursos.
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             if (value != null) statement.setString(1, value);
             try (ResultSet rs = statement.executeQuery()) {
