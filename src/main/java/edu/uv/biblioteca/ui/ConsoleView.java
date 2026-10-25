@@ -46,9 +46,11 @@ public final class ConsoleView implements AutoCloseable {
         clear();
         out.println(paint("UNIVERSIDAD VERACRUZANA", GREEN));
         out.println(paint(SPLASH, WHITE));
-        out.println(paint("       BIBLIOTECASQL  |  JAVA Y POSTGRESQL", GREEN));
-        out.println("       Experiencia educativa: Bases de Datos");
-        out.println("       Monograma de texto, no escudo oficial de la UV.");
+        out.println(paint("       BIBLIOTECASQL  |  v9.0.5", GREEN));
+        out.println("       Facultad de Negocios y Tecnologías Campus Ixtaczoquitlán");
+        out.println("       Universidad Veracruzana");
+        out.println();
+        out.println("       Designed and Developed by JEGD");
         pause("Presione ENTER para abrir el menú...");
     }
     public void pause(String prompt) { ask("\n" + prompt); }

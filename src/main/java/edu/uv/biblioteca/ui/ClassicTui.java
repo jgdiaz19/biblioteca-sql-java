@@ -121,9 +121,10 @@ public final class ClassicTui implements AutoCloseable {
             center(height / 2 - 3, "╚██╗ ██╔╝╚██╗ ██╔╝", YELLOW);
             center(height / 2 - 2, " ╚████╔╝  ╚████╔╝ ", YELLOW);
             center(height / 2 - 1, "  ╚═══╝    ╚═══╝  ", YELLOW);
-            center(height / 2 + 1, "BIBLIOTECASQL  |  v9.0", WHITE);
-            center(height / 2 + 3, "Ingeniería de Software · Bases de Datos", CYAN);
-            center(height / 2 + 5, "Monograma tipográfico, no escudo oficial", GREY);
+            center(height / 2 + 1, "BIBLIOTECASQL  |  v9.0.5", WHITE);
+            center(height / 2 + 3, "Facultad de Negocios y Tecnologías Campus Ixtaczoquitlán", CYAN);
+            center(height / 2 + 4, "Universidad Veracruzana", WHITE);
+            center(height / 2 + 6, "Designed and Developed by JEGD", GREY);
             screen.refresh();
             KeyStroke key = nextKey();
             if (key != null) return;

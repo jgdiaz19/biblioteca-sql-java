@@ -1,4 +1,4 @@
-# BibliotecaSQL v9.0.4
+# BibliotecaSQL v9.0.5
 
 Aplicación didáctica Java 17 + PostgreSQL + JDBC + Lanterna, Universidad Veracruzana.
 
@@ -93,3 +93,10 @@ Consulta `docs/21-prestamos-reportes-y-fechas.md` para los casos de prueba.
 - Los ejercicios leen la base `biblioteca_operativa`. Los que emplean `libros_consulta` leen una vista, no la tabla física.
 - No se modifica ningún dato, tabla o volumen en esta actualización.
 - Revisar `docs/22-auditoria-laboratorio-sql.md` para conocer limitaciones y verificaciones pendientes.
+
+## Actualización v9.0.5
+
+- La pantalla de bienvenida identifica a la Facultad de Negocios y Tecnologías, Campus Ixtaczoquitlán, y a la Universidad Veracruzana.
+- Se añadió el crédito «Designed and Developed by JEGD».
+- Se actualizó a v9.0.5 el número de versión mostrado en la pantalla de bienvenida y el proyecto Maven.
+- No hay cambios en la base de datos, consultas ni reglas de negocio.
