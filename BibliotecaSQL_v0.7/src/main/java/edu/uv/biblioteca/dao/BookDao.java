@@ -12,7 +12,7 @@ import java.util.List;
 /** DAO: solo consultas SQL, no imprime ni solicita información al usuario. */
 public final class BookDao {
     public static final String LIST_SQL = "SELECT id_libro, titulo, categoria, disponible FROM libros ORDER BY id_libro";
-    public static final String SEARCH_SQL = "SELECT id_libro, titulo, categoria, disponible FROM libros WHERE titulo ILIKE ? ORDER BY titulo";
+    public static final String SEARCH_SQL = "SELECT id_libro, titulo, categoria, disponible FROM libros WHERE CONCAT_WS(' ', id_libro::text, titulo, categoria) ILIKE ? ORDER BY titulo";
     public static final String STATS_SQL = "SELECT categoria, COUNT(*) AS total, "
             + "COUNT(*) FILTER (WHERE disponible) AS disponibles "
             + "FROM libros GROUP BY categoria ORDER BY categoria";

@@ -1,9 +1,47 @@
-# BibliotecaSQL v0.6
+# BibliotecaSQL v0.7 — Interfaz clásica interactiva
 
-**Java 17 · JDBC · PostgreSQL · Docker Compose · consola con colores UV.**
+Proyecto didáctico Java 17, PostgreSQL, JDBC, Maven, Docker Compose y Lanterna.
 
+## Inicio
 
-Aplicación didáctica de consola desarrollada en Java 17, PostgreSQL y JDBC. El objetivo es relacionar los contenidos del segundo parcial de Bases de Datos con un sistema bibliotecario tradicional.
+```bash
+docker compose up -d --wait
+mvn compile exec:java
+```
+
+Abra una terminal de al menos 80 × 24 caracteres. En Windows se recomienda Windows Terminal; en Linux y macOS una terminal compatible con UTF-8.
+
+**La nueva interfaz TUI utiliza Lanterna** para evitar depender de teclas Fn, comandos `clear` y lecturas con ENTER. Los módulos de JDBC, reglas de negocio y laboratorio A7–A9 se conservan del proyecto previo.
+
+## Controles
+
+- Menús: números 1–9, 0 regresar, ↑↓ y ENTER.
+- Catálogo: 1 o / para buscar en vivo; 2 para alternar memoria/SQL; ↑↓, PgUp/PgDn para navegar; ENTER para detalles.
+- Durante la búsqueda: letras y números editan el filtro; retroceso elimina caracteres; ENTER finaliza la edición y ESC cancela su edición.
+- En reportes: flechas y PgUp/PgDn para recorrer filas; 0 o ESC para salir.
+
+La búsqueda SQL utiliza `PreparedStatement` para pasar parámetros a PostgreSQL. El modo en memoria filtra la colección Java sin tocar la base.
+
+## Alcance actual
+
+La búsqueda incremental funciona en todas las tablas. La alternancia entre filtrado Java y PostgreSQL se ofrece en el catálogo de libros; los demás reportes se filtran en memoria. La base de datos académica sigue separada de la operativa. Los 21 ejercicios de A7, A8 y A9 de la versión anterior se conservan.
+
+## Documentación
+
+- `docs/11-interfaz-clasica-v07.md`: teclado, búsqueda y responsabilidades de clases.
+- Documentos `docs/01` a `docs/10`: arquitectura, transacciones, pruebas y laboratorios.
+
+## Pruebas
+
+```bash
+bash scripts/probar-integracion.sh
+```
+
+La interfaz requiere interacción humana para validar sus eventos de teclado; las pruebas de integración existentes siguen cubriendo las reglas de negocio. Ejecutar `mvn test` requiere Maven y los servicios de prueba configurados.
+
+## Nota de validación
+
+El código fuente fue revisado estáticamente, pero en el entorno de elaboración no se dispuso de Maven ni del JAR Lanterna para confirmar la compilación del nuevo módulo. Se debe ejecutar `mvn compile exec:java` y registrar cualquier error antes de usarlo con estudiantes.
 
 ## Requisitos
 
