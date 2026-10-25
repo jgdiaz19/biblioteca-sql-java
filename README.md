@@ -100,3 +100,8 @@ Consulta `docs/21-prestamos-reportes-y-fechas.md` para los casos de prueba.
 - Se añadió el crédito «Designed and Developed by JEGD».
 - Se actualizó a v9.0.5 el número de versión mostrado en la pantalla de bienvenida y el proyecto Maven.
 - No hay cambios en la base de datos, consultas ni reglas de negocio.
+
+
+## Historia y seguimiento del desarrollo
+
+Este repositorio tiene un historial Git **reconstruido** desde los paquetes de versiones. Consulte [la cronología](HISTORIAL.md), [el plan de tareas](PROJECTS_PLAN.md) y [las instrucciones de publicación](PUBLICAR_EN_GITHUB.md).
