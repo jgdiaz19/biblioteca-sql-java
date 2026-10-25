@@ -1,4 +1,4 @@
-# BibliotecaSQL — versión 0.5
+# BibliotecaSQL — versión 0.5.1
 
 Aplicación didáctica de consola desarrollada en Java 17, PostgreSQL y JDBC. El objetivo es relacionar los contenidos del segundo parcial de Bases de Datos con un sistema bibliotecario tradicional.
 
@@ -16,7 +16,7 @@ docker compose up -d
 mvn compile exec:java
 ```
 
-Espere a que PostgreSQL esté listo antes de iniciar Java. La carga automática de datos ocurre únicamente cuando el volumen de Docker es nuevo. Para reiniciar desde cero, consulte primero los datos que desea conservar: `docker compose down -v` elimina el volumen de PostgreSQL.
+Espere a que PostgreSQL esté listo antes de iniciar Java. El arranque inicial utiliza `database/01-inicializar.sql` y no depende de permisos de ejecución de scripts de shell. La carga automática de datos ocurre únicamente cuando el volumen de Docker es nuevo. Para reiniciar desde cero, consulte primero los datos que desea conservar: `docker compose down -v` elimina el volumen de PostgreSQL.
 
 La conexión predeterminada es `jdbc:postgresql://localhost:5432/biblioteca_operativa`, usuario `admin`, contraseña local de práctica `biblioteca_local`. Puede cambiarla mediante `DB_URL`, `DB_USER` y `DB_PASSWORD`. No utilice estas credenciales en servidores públicos.
 
@@ -66,3 +66,7 @@ Se incluyen diez pruebas JUnit: tres de consola y siete de integración. Las pru
 Lea `docs/07-pruebas.md` para conocer las verificaciones y `docs/08-matriz-trazabilidad.md` para revisar la correspondencia de los contenidos SQL con el código Java.
 
 Fuente de datos: https://gist.github.com/jgdiaz19/af0426289725f559646fec9654253a5f
+
+## Si actualiza desde v0.5 después del error 126
+
+El intento de inicialización anterior pudo haber creado un volumen incompleto. Si es una instalación nueva y no tiene datos que conservar, ejecute `docker compose down -v` **desde la carpeta de la v0.5**, y después inicie esta versión con `docker compose up -d --wait`. El comando `down -v` borra los datos persistentes del proyecto indicado: no lo ejecute si necesita conservarlos. Compruebe el arranque con `docker compose logs postgres` y `docker compose exec postgres psql -U admin -d biblioteca_operativa -c "SELECT COUNT(*) FROM libros;"`. Debe indicar 24 libros.
