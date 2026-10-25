@@ -364,13 +364,29 @@ public final class ClassicTui implements AutoCloseable {
         }
     }
 
-    // Solicitamos los campos del libro en ventanas pequeñas y validamos antes de guardar.
+    // Permitimos elegir un autor registrado o capturar los datos de uno nuevo.
     private void editBook(BookDetails previous) throws IOException, SQLException {
         boolean create = previous == null;
         String title = create ? "AGREGAR LIBRO" : "MODIFICAR LIBRO";
         List<Author> authors = service.authors();
-        int authorChoice = choose("SELECCIONE AUTOR", authors.stream().map(Author::name).toList());
+
+        List<String> choices = new ArrayList<>();
+        choices.add("+ Registrar nuevo autor");
+        for (Author author : authors) choices.add(author.name());
+        int authorChoice = choose("AUTOR DEL LIBRO", choices);
         if (authorChoice < 0) return;
+
+        // El nuevo autor se guarda después de confirmar el libro completo.
+        boolean newAuthor = authorChoice == 0;
+        String authorName = null;
+        String nationality = null;
+        if (newAuthor) {
+            authorName = modalInput("NUEVO AUTOR", "Nombre completo", "", 120);
+            if (authorName == null) return;
+            nationality = modalInput("NUEVO AUTOR", "Nacionalidad (opcional)", "", 60);
+            if (nationality == null) return;
+        }
+
         String name = modalInput(title, "Título", create ? "" : previous.title(), 180);
         if (name == null) return;
         String isbn = modalInput(title, "ISBN", create ? "" : previous.isbn(), 20);
@@ -385,17 +401,24 @@ public final class ClassicTui implements AutoCloseable {
         if (pages == null) return;
         String price = modalInput(title, "Precio", create ? "0.00" : previous.price().toPlainString(), 16);
         if (price == null) return;
+
         try {
+            // Para un autor nuevo, el identificador real lo generará PostgreSQL.
+            int authorId = newAuthor ? 1 : authors.get(authorChoice - 1).id();
             BookDetails book = new BookDetails(create ? 0 : previous.id(), name.trim(), isbn.trim(),
                     Integer.parseInt(year.trim()), category.trim(), publisher.trim(),
                     Integer.parseInt(pages.trim()), new BigDecimal(price.trim()),
-                    create || previous.available(), authors.get(authorChoice).id());
+                    create || previous.available(), authorId);
             if (!confirm(title, "¿Guardar los cambios de «" + book.title() + "»?")) return;
+
             if (create) {
-                int id = service.addBook(book);
+                int id = newAuthor
+                        ? service.addBookWithNewAuthor(book, authorName, nationality)
+                        : service.addBook(book);
                 message("OPERACIÓN CORRECTA", "Libro agregado correctamente. Referencia: " + id);
             } else {
-                service.updateBook(book);
+                if (newAuthor) service.updateBookWithNewAuthor(book, authorName, nationality);
+                else service.updateBook(book);
                 message("OPERACIÓN CORRECTA", "El libro se actualizó correctamente.");
             }
         } catch (NumberFormatException ex) {

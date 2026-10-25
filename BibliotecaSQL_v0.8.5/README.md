@@ -1,4 +1,4 @@
-# BibliotecaSQL v0.8.4
+# BibliotecaSQL v0.8.5
 
 Aplicación de consola para las prácticas de Bases de Datos de Ingeniería de Software, Universidad Veracruzana.
 
@@ -12,6 +12,15 @@ mvn compile exec:java
 ```
 
 **No es necesario eliminar los volúmenes anteriores si los datos ya están inicializados.**
+
+## Cambios de v0.8.5
+
+- El formulario de libro permite elegir un autor existente o registrar uno nuevo.
+- Al registrar un autor nuevo se solicita nombre y nacionalidad (opcional).
+- El nuevo autor y el libro se guardan en una sola transacción JDBC: si falla el libro, se revierte también el autor.
+- La modificación de un libro permite asociarlo con un autor nuevo o existente.
+- Se comprueba si ya existe un autor con el mismo nombre (sin distinguir mayúsculas); en ese caso se solicita elegirlo de la lista.
+- No se altera el esquema, ni los datos de `biblioteca_universitaria`, ni es necesario eliminar volúmenes.
 
 ## Cambios de v0.8.4
 

@@ -96,6 +96,74 @@ public final class BookDao {
         return result;
     }
 
+    // Guardamos al autor y su libro dentro de una misma transacción.
+    public int insertWithNewAuthor(BookDetails book, String name, String nationality)
+            throws SQLException {
+        return saveWithNewAuthor(book, name, nationality, true);
+    }
+
+    // Actualizamos el libro y registramos su nuevo autor en una sola operación.
+    public void updateWithNewAuthor(BookDetails book, String name, String nationality)
+            throws SQLException {
+        saveWithNewAuthor(book, name, nationality, false);
+    }
+
+    private int saveWithNewAuthor(BookDetails book, String name, String nationality,
+                                  boolean create) throws SQLException {
+        // Evitamos iniciar una transacción dentro de otra transacción.
+        if (!connection.getAutoCommit()) {
+            throw new SQLException("Ya existe una transacción activa.");
+        }
+
+        connection.setAutoCommit(false);
+        try {
+            // Comprobamos de nuevo que no exista un autor con el mismo nombre.
+            String lookup = "SELECT id_autor FROM autores WHERE LOWER(TRIM(nombre)) = LOWER(?) LIMIT 1";
+            try (PreparedStatement stmt = SqlTrace.prepare(connection, lookup)) {
+                stmt.setString(1, name.trim());
+                try (ResultSet rs = stmt.executeQuery()) {
+                    if (rs.next()) {
+                        throw new IllegalArgumentException(
+                            "El autor ya está registrado. Selecciónelo de la lista.");
+                    }
+                }
+            }
+
+            int authorId;
+            String sql = "INSERT INTO autores (nombre, nacionalidad) VALUES (?, ?) RETURNING id_autor";
+            try (PreparedStatement stmt = SqlTrace.prepare(connection, sql)) {
+                stmt.setString(1, name.trim());
+                stmt.setString(2, nationality == null || nationality.isBlank()
+                        ? null : nationality.trim());
+                try (ResultSet rs = stmt.executeQuery()) {
+                    if (!rs.next()) throw new SQLException("No se generó el identificador del autor.");
+                    authorId = rs.getInt(1);
+                }
+            }
+
+            // Usamos el ID generado sin solicitárselo al usuario.
+            BookDetails updated = new BookDetails(book.id(), book.title(), book.isbn(),
+                    book.year(), book.category(), book.publisher(), book.pages(),
+                    book.price(), book.available(), authorId);
+            int result;
+            if (create) {
+                result = insert(updated);
+            } else {
+                update(updated);
+                result = book.id();
+            }
+            connection.commit();
+            return result;
+        } catch (SQLException | RuntimeException ex) {
+            // Si falla el libro, tampoco dejamos al autor guardado sin terminar.
+            try { connection.rollback(); }
+            catch (SQLException error) { ex.addSuppressed(error); }
+            throw ex;
+        } finally {
+            connection.setAutoCommit(true);
+        }
+    }
+
     public int insert(BookDetails b) throws SQLException {
         String sql = """
                 INSERT INTO libros (titulo, isbn, anio_publicacion, categoria,

@@ -69,6 +69,32 @@ public final class LibraryService {
         return books.insert(b);
     }
 
+    // Validamos los datos de un autor que se registra desde el formulario de libro.
+    private void validateAuthor(String name, String nationality) {
+        if (name == null || name.isBlank() || name.trim().length() > 120)
+            throw new IllegalArgumentException("El nombre del autor es obligatorio (máximo 120 caracteres).");
+        if (nationality != null && nationality.trim().length() > 60)
+            throw new IllegalArgumentException("La nacionalidad admite hasta 60 caracteres.");
+    }
+
+    // Registramos un nuevo autor y su libro sin dejar operaciones parciales.
+    public int addBookWithNewAuthor(BookDetails book, String name, String nationality)
+            throws SQLException {
+        validateBook(book);
+        validateAuthor(name, nationality);
+        transactions.requireOperationalDatabase();
+        return books.insertWithNewAuthor(book, name, nationality);
+    }
+
+    // Cambiamos el autor del libro creando su registro dentro de la transacción.
+    public void updateBookWithNewAuthor(BookDetails book, String name, String nationality)
+            throws SQLException {
+        validateBook(book);
+        validateAuthor(name, nationality);
+        transactions.requireOperationalDatabase();
+        books.updateWithNewAuthor(book, name, nationality);
+    }
+
     public void updateBook(BookDetails b) throws SQLException {
         validateBook(b);
         transactions.requireOperationalDatabase();
