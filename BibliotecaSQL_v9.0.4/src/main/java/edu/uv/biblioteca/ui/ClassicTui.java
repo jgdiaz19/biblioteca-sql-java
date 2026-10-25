@@ -334,9 +334,11 @@ public final class ClassicTui implements AutoCloseable {
             int a = activity + 6;
             while (true) {
                 var titles = service.labTitles(a);
-                int choice = menu("LABORATORIO A" + a, titles.toArray(String[]::new), "1-7 Elegir consulta   0 Volver");
-                if (choice == 0) break;
-                LabResult result = service.labRun(a, choice);
+                // La lista permite elegir más de nueve ejercicios sin usar teclas de función.
+                int index = choose("LABORATORIO A" + a + " · " + titles.size() + " CONSULTAS", titles);
+                if (index < 0) break;
+                SqlTrace.clear();
+                LabResult result = service.labRun(a, index + 1);
                 List<List<String>> rows = new ArrayList<>();
                 rows.addAll(result.rows());
                 sqlExplanation = result.explanation();

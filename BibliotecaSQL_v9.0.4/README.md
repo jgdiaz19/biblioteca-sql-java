@@ -1,4 +1,4 @@
-# BibliotecaSQL v9.0.3
+# BibliotecaSQL v9.0.4
 
 Aplicación didáctica Java 17 + PostgreSQL + JDBC + Lanterna, Universidad Veracruzana.
 
@@ -83,3 +83,13 @@ El código fuente compiló mediante `javac --release 17` con clases auxiliares d
 - No se requieren migraciones adicionales del esquema para esta actualización.
 
 Consulta `docs/21-prestamos-reportes-y-fechas.md` para los casos de prueba.
+
+
+## Laboratorio SQL ampliado (v9.0.4)
+
+- 36 consultas de solo lectura: 12 para A7, 12 para A8 y 12 para A9.
+- La selección del ejercicio tiene apuntador, flechas, búsqueda con `/`, Page Up/Down y ENTER.
+- En el modo didáctico se puede consultar SQL, Java y las explicaciones desde las tablas de resultados.
+- Los ejercicios leen la base `biblioteca_operativa`. Los que emplean `libros_consulta` leen una vista, no la tabla física.
+- No se modifica ningún dato, tabla o volumen en esta actualización.
+- Revisar `docs/22-auditoria-laboratorio-sql.md` para conocer limitaciones y verificaciones pendientes.
