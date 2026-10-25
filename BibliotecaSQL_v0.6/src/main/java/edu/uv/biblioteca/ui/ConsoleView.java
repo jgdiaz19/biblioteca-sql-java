@@ -19,26 +19,65 @@ public final class ConsoleView implements AutoCloseable {
     private final PrintStream out;
     private final boolean ansi;
     private static final int WIDTH = 88;
+    private boolean colorsEnabled;
+    private static final String RESET = "\u001b[0m";
+    // Usamos los colores azul y verde de la identidad institucional de la UV.
+    private static final String BLUE = "\u001b[38;2;24;82;157m";
+    private static final String GREEN = "\u001b[38;2;40;173;86m";
+    private static final String WHITE = "\u001b[97m";
+    private static final String BG = "\u001b[48;2;9;25;42m";
+    private static final String ERROR = "\u001b[38;2;255;174;174m";
+    private static final String SPLASH = """
+              UU        UU     VV          VV
+              UU        UU      VV        VV
+              UU        UU       VV      VV
+              UU        UU        VV    VV
+              UU        UU         VV  VV
+               UUUUUUUUUU          VVVV
+                UUUUUUUU            VV
+            """;
+    // Conservamos la salida de texto simple si ANSI no está disponible.
+    private String paint(String text, String color) {
+        return colorsEnabled ? BG + color + text + RESET : text;
+    }
+    public void toggleColors() { colorsEnabled = !colorsEnabled; }
+    public boolean colorsEnabled() { return colorsEnabled; }
+    public void splash() {
+        clear();
+        out.println(paint("UNIVERSIDAD VERACRUZANA", GREEN));
+        out.println(paint(SPLASH, WHITE));
+        out.println(paint("       BIBLIOTECASQL  |  JAVA Y POSTGRESQL", GREEN));
+        out.println("       Experiencia educativa: Bases de Datos");
+        out.println("       Monograma de texto, no escudo oficial de la UV.");
+        pause("Presione ENTER para abrir el menú...");
+    }
+    public void pause(String prompt) { ask("\n" + prompt); }
+    public void success(String text) { out.println(paint(text, GREEN)); }
+    public void error(String text) { out.println(paint(text, ERROR)); }
+    public void section(String text) { out.println(paint(text, BLUE)); }
+
 
     public ConsoleView(InputStream input, PrintStream output) {
         // Inicializamos el lector y comprobamos si podemos limpiar la terminal.
         this.scanner = new Scanner(input, StandardCharsets.UTF_8);
         this.out = output;
         this.ansi = System.console() != null || "true".equalsIgnoreCase(System.getenv("FORCE_ANSI"));
+        // Desactivamos los colores si NO_COLOR está definido en el entorno.
+        this.colorsEnabled = ansi && System.getenv("NO_COLOR") == null;
     }
     public void clear() {
         // Utilizamos secuencias ANSI cuando la terminal permite limpiar la pantalla.
-        if (ansi) out.print("\033[2J\033[H"); else out.println("\n".repeat(3));
+        if (ansi) out.print("\033[0m\033[2J\033[H"); else out.println("\n".repeat(3));
         out.flush();
     }
     public void heading(String title) {
-        out.println("╔" + "═".repeat(WIDTH - 2) + "╗");
-        out.println("║ " + String.format("%-" + (WIDTH - 4) + "s", fit(title, WIDTH - 4)) + " ║");
-        out.println("╚" + "═".repeat(WIDTH - 2) + "╝");
+        out.println(paint("╔" + "═".repeat(WIDTH - 2) + "╗", BLUE));
+        out.println(paint("║ " + String.format("%-" + (WIDTH - 4) + "s", fit(title, WIDTH - 4)) + " ║", WHITE));
+        out.println(paint("╚" + "═".repeat(WIDTH - 2) + "╝", BLUE));
     }
     public void menu(boolean teaching) {
         clear();
-        heading("BIBLIOTECASQL · V0.5 · POSTGRESQL");
+        heading("BIBLIOTECASQL · V0.6 · POSTGRESQL");
         out.println("  1. Catálogo de libros");
         out.println("  2. Buscar libros por título");
         out.println("  3. Préstamos activos");
@@ -49,6 +88,7 @@ public final class ConsoleView implements AutoCloseable {
         out.println("  8. Reporte de préstamos por usuario");
         out.println("  9. Laboratorio de consultas SQL");
         out.println("  D. Modo didáctico SQL: " + (teaching ? "ACTIVO" : "INACTIVO"));
+        out.println("  C. Colores institucionales: " + (colorsEnabled ? "ACTIVOS" : "INACTIVOS"));
         out.println("  0. Salir");
     }
     public String ask(String label) {
@@ -57,9 +97,9 @@ public final class ConsoleView implements AutoCloseable {
         return scanner.nextLine().trim();
     }
     public void message(String message) { out.println(message); }
-    public void pause() { ask("\nPulse ENTER para regresar al menú..."); }
+    public void pause() { pause("Pulse ENTER para regresar al menú..."); }
     public void sql(String query, String parameter) {
-        out.println("\nCONSULTA SQL:");
+        out.println(paint("\nCONSULTA SQL:", GREEN));
         out.println(query.strip() + ";");
         if (parameter != null) out.println("Parámetro 1: " + parameter);
         out.println();
@@ -115,6 +155,13 @@ public final class ConsoleView implements AutoCloseable {
         List<List<String>> rows = new ArrayList<>();
         for (UserLoanStat stat : stats) rows.add(List.of(String.valueOf(stat.userId()), stat.user(), String.valueOf(stat.activeLoans())));
         table(List.of("ID", "USUARIO", "ACTIVOS"), rows, 6, 53, 10);
+    }
+    public void labGroups() {
+        heading("LABORATORIO SQL · SEGUNDO PARCIAL");
+        out.println("  1. A7  Funciones y agrupamiento");
+        out.println("  2. A8  JOIN y consultas entre tablas");
+        out.println("  3. A9  Subconsultas y consultas correlacionadas");
+        out.println("  0. Volver al menú principal");
     }
     public void laboratoryMenu(List<String> titles) {
         heading("LABORATORIO SQL");

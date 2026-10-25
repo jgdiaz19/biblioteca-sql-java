@@ -39,4 +39,6 @@ public final class LibraryService {
     public List<UserLoanStat> userCounts() throws SQLException { return reports.userCounts(); }
     public List<String> labTitles() { return laboratory.titles(); }
     public LabResult labRun(int number) throws SQLException { return laboratory.run(number); }
+    public List<String> labTitles(int activity) { return laboratory.titles(activity); }
+    public LabResult labRun(int activity, int number) throws SQLException { return laboratory.run(activity, number); }
 }

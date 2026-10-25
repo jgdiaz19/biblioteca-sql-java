@@ -1,4 +1,7 @@
-# BibliotecaSQL — versión 0.5.1
+# BibliotecaSQL v0.6
+
+**Java 17 · JDBC · PostgreSQL · Docker Compose · consola con colores UV.**
+
 
 Aplicación didáctica de consola desarrollada en Java 17, PostgreSQL y JDBC. El objetivo es relacionar los contenidos del segundo parcial de Bases de Datos con un sistema bibliotecario tradicional.
 
@@ -70,3 +73,16 @@ Fuente de datos: https://gist.github.com/jgdiaz19/af0426289725f559646fec9654253a
 ## Si actualiza desde v0.5 después del error 126
 
 El intento de inicialización anterior pudo haber creado un volumen incompleto. Si es una instalación nueva y no tiene datos que conservar, ejecute `docker compose down -v` **desde la carpeta de la v0.5**, y después inicie esta versión con `docker compose up -d --wait`. El comando `down -v` borra los datos persistentes del proyecto indicado: no lo ejecute si necesita conservarlos. Compruebe el arranque con `docker compose logs postgres` y `docker compose exec postgres psql -U admin -d biblioteca_operativa -c "SELECT COUNT(*) FROM libros;"`. Debe indicar 24 libros.
+
+
+## Novedades de la versión 0.6
+
+- Splash de apertura con monograma tipográfico `UV` (no es el escudo oficial).
+- Limpieza de pantalla al navegar y pausas al mostrar resultados.
+- Colores inspirados en la identidad UV (`#18529D` y `#28AD56`) con opción `C` para desactivarlos.
+- Tres submenús de laboratorio: A7, A8 y A9; siete consultas de solo lectura por bloque.
+- Comentarios cortos en el código y guías en `docs/09-interfaz-institucional.md` y `docs/10-laboratorios-segundo-parcial.md`.
+
+**Uso**: `docker compose up -d --wait` y `mvn compile exec:java`. Si ya existe el volumen de la versión anterior, los datos se conservan; no es necesario usar `down -v`. Para activar ANSI en una terminal sin detección automática: `FORCE_ANSI=true mvn compile exec:java`. Para suprimir colores: `NO_COLOR=1 mvn compile exec:java`.
+
+**Validación**: los ejemplos A8/A9 son temáticos y requieren cotejo posterior con los ejercicios originales. Las pruebas de integración necesitan Docker y Maven.

@@ -29,12 +29,15 @@ public final class MenuController {
         }
     }
     public void run() {
+        // Mostramos la presentación institucional antes de abrir el menú.
+        view.splash();
         // Mantenemos abierto el menú hasta elegir salir o terminar la entrada.
         while (true) {
             view.menu(teaching);
             String choice = view.ask("\nSeleccione una opción: ");
             if (choice == null || "0".equals(choice)) break;
             if ("D".equalsIgnoreCase(choice)) { teaching = !teaching; continue; }
+            if ("C".equalsIgnoreCase(choice)) { view.toggleColors(); continue; }
             view.clear();
             try {
                 switch (choice) {
@@ -69,7 +72,7 @@ public final class MenuController {
                         Integer bookId = positiveId("ID del libro: ");
                         if (bookId == null) return;
                         int loanId = service.borrow(userId, bookId);
-                        view.message("Préstamo registrado. Identificador: " + loanId);
+                        view.success("Préstamo registrado. Identificador: " + loanId);
                         if (teaching) view.message("Transacción: comprobaciones, bloqueo de filas, INSERT, UPDATE y COMMIT.");
                     }
                     case "6" -> {
@@ -77,7 +80,7 @@ public final class MenuController {
                         Integer loanId = positiveId("ID del préstamo: ");
                         if (loanId == null) return;
                         service.returnBook(loanId);
-                        view.message("Devolución registrada. El libro vuelve a estar disponible.");
+                        view.success("Devolución registrada. El libro vuelve a estar disponible.");
                         if (teaching) view.message("Transacción: bloqueo de filas, actualización del préstamo, UPDATE del libro y COMMIT.");
                     }
                     case "7" -> {
@@ -94,7 +97,7 @@ public final class MenuController {
                     default -> view.message("Opción no válida. Seleccione un valor del menú.");
                 }
             } catch (SQLException ex) {
-                view.message("Error de PostgreSQL. SQLState: " + ex.getSQLState());
+                view.error("Error de PostgreSQL. SQLState: " + ex.getSQLState());
             } catch (IllegalArgumentException ex) {
                 view.message(ex.getMessage());
             }
@@ -102,21 +105,44 @@ public final class MenuController {
         }
         view.message("Hasta pronto.");
     }
-    private void laboratory() throws SQLException {
-        // Mostramos un submenú para elegir una consulta SQL preparada.
+    private void laboratory() {
+        // Separamos las actividades A7, A8 y A9 para facilitar la navegación.
         while (true) {
             view.clear();
-            view.laboratoryMenu(service.labTitles());
-            String option = view.ask("\nConsulta: ");
+            view.labGroups();
+            String option = view.ask("\nSeleccione la actividad: ");
             if (option == null || "0".equals(option)) return;
+            int activity;
+            switch (option) {
+                case "1" -> activity = 7;
+                case "2" -> activity = 8;
+                case "3" -> activity = 9;
+                default -> {
+                    view.error("Seleccione una opción entre 0 y 3.");
+                    view.pause();
+                    continue;
+                }
+            }
+            labActivity(activity);
+        }
+    }
+    private void labActivity(int activity) {
+        while (true) {
+            view.clear();
+            view.heading("LABORATORIO A" + activity);
+            view.laboratoryMenu(service.labTitles(activity));
+            String option = view.ask("\nSeleccione la consulta: ");
+            if (option == null || "0".equals(option)) return;
+            view.clear();
             try {
                 int number = Integer.parseInt(option);
-                view.clear();
-                view.laboratoryResult(service.labRun(number));
+                view.laboratoryResult(service.labRun(activity, number));
+            } catch (SQLException ex) {
+                view.error("No se pudo ejecutar la consulta. SQLState: " + ex.getSQLState());
             } catch (NumberFormatException ex) {
-                view.message("Escriba el número de la consulta.");
+                view.error("Escriba el número de una consulta.");
             } catch (IllegalArgumentException ex) {
-                view.message(ex.getMessage());
+                view.error(ex.getMessage());
             }
             view.pause();
         }
