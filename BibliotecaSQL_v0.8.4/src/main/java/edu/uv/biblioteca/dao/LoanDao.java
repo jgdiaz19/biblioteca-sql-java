@@ -1,6 +1,7 @@
 package edu.uv.biblioteca.dao;
 
 import edu.uv.biblioteca.model.Loan;
+import edu.uv.biblioteca.model.LibraryUser;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -31,5 +32,15 @@ public final class LoanDao {
                     rs.getString("nombre"),rs.getDate("fecha_devolucion").toLocalDate()));
         }
         return loans;
+    }
+    // Consultamos únicamente los usuarios habilitados para solicitar libros.
+    public List<LibraryUser> users() throws SQLException {
+        List<LibraryUser> result = new ArrayList<>();
+        try (PreparedStatement stmt = SqlTrace.prepare(connection,
+                "SELECT id_usuario, nombre FROM usuarios WHERE activo = TRUE ORDER BY nombre");
+             ResultSet rs = stmt.executeQuery()) {
+            while (rs.next()) result.add(new LibraryUser(rs.getInt(1), rs.getString(2)));
+        }
+        return result;
     }
 }

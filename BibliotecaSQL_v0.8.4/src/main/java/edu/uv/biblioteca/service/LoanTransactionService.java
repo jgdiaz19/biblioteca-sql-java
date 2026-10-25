@@ -121,6 +121,71 @@ public final class LoanTransactionService {
         });
     }
 
+    // Verificamos que los cambios solo afecten la copia operativa.
+    public void requireOperationalDatabase() throws SQLException {
+        try (PreparedStatement stmt = SqlTrace.prepare(connection, "SELECT current_database()");
+             ResultSet rs = stmt.executeQuery()) {
+            if (!rs.next() || !"biblioteca_operativa".equals(rs.getString(1)))
+                throw new IllegalArgumentException("Solo se puede modificar biblioteca_operativa.");
+        }
+    }
+
+    // Modificamos el plazo sin cambiar los datos históricos del préstamo.
+    public void changeDueDate(int loanId, LocalDate dueDate) throws SQLException {
+        if (dueDate == null) throw new IllegalArgumentException("Seleccione una fecha válida.");
+        transaction(() -> {
+            String sql = """
+                    UPDATE prestamos SET fecha_devolucion = ?
+                    WHERE id_prestamo = ? AND fecha_devolucion_real IS NULL
+                      AND fecha_prestamo <= ?
+                    """;
+            try (PreparedStatement stmt = SqlTrace.prepare(connection, sql)) {
+                stmt.setDate(1, Date.valueOf(dueDate));
+                stmt.setInt(2, loanId);
+                stmt.setDate(3, Date.valueOf(dueDate));
+                if (stmt.executeUpdate() != 1)
+                    throw new IllegalArgumentException("El préstamo está cerrado o la fecha no es válida.");
+            }
+            return null;
+        });
+    }
+
+    // Cancelamos un préstamo abierto y devolvemos el libro al catálogo.
+    // No se permite borrar préstamos ya devueltos porque forman parte del historial.
+    public void cancelLoan(int loanId) throws SQLException {
+        transaction(() -> {
+            int bookId;
+            try (PreparedStatement stmt = SqlTrace.prepare(connection, """
+                    SELECT id_libro FROM prestamos
+                    WHERE id_prestamo = ? AND fecha_devolucion_real IS NULL FOR UPDATE
+                    """)) {
+                stmt.setInt(1, loanId);
+                try (ResultSet rs = stmt.executeQuery()) {
+                    if (!rs.next()) throw new IllegalArgumentException("Solo pueden cancelarse préstamos activos.");
+                    bookId = rs.getInt(1);
+                }
+            }
+            try (PreparedStatement stmt = SqlTrace.prepare(connection,
+                    "SELECT id_libro FROM libros WHERE id_libro = ? FOR UPDATE")) {
+                stmt.setInt(1, bookId);
+                try (ResultSet rs = stmt.executeQuery()) {
+                    if (!rs.next()) throw new SQLException("No se encontró el libro.");
+                }
+            }
+            try (PreparedStatement stmt = SqlTrace.prepare(connection,
+                    "DELETE FROM prestamos WHERE id_prestamo = ? AND fecha_devolucion_real IS NULL")) {
+                stmt.setInt(1, loanId);
+                if (stmt.executeUpdate() != 1) throw new SQLException("No se pudo cancelar el préstamo.");
+            }
+            try (PreparedStatement stmt = SqlTrace.prepare(connection,
+                    "UPDATE libros SET disponible = TRUE WHERE id_libro = ?")) {
+                stmt.setInt(1, bookId);
+                if (stmt.executeUpdate() != 1) throw new SQLException("No se pudo liberar el libro.");
+            }
+            return null;
+        });
+    }
+
     private interface Work<T> { T run() throws SQLException; }
 
     private <T> T transaction(Work<T> work) throws SQLException {

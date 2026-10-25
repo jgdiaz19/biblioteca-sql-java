@@ -10,6 +10,12 @@ import com.googlecode.lanterna.screen.TerminalScreen;
 import com.googlecode.lanterna.terminal.DefaultTerminalFactory;
 import edu.uv.biblioteca.dao.SqlTrace;
 import edu.uv.biblioteca.model.Book;
+import edu.uv.biblioteca.model.BookDetails;
+import edu.uv.biblioteca.model.Author;
+import edu.uv.biblioteca.model.LibraryUser;
+import edu.uv.biblioteca.model.Loan;
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import edu.uv.biblioteca.model.LabResult;
 import edu.uv.biblioteca.service.LibraryService;
 import java.io.IOException;
@@ -63,7 +69,7 @@ public final class ClassicTui implements AutoCloseable {
                 sqlExplanation = "";
                 switch (selected) {
                     case 1 -> tableBooks();
-                    case 2 -> tableLoans();
+                    case 2 -> manageLoans();
                     case 3 -> tableStats();
                     case 4 -> borrow();
                     case 5 -> giveBack();
@@ -90,7 +96,7 @@ public final class ClassicTui implements AutoCloseable {
             center(height / 2 - 3, "╚██╗ ██╔╝╚██╗ ██╔╝", YELLOW);
             center(height / 2 - 2, " ╚████╔╝  ╚████╔╝ ", YELLOW);
             center(height / 2 - 1, "  ╚═══╝    ╚═══╝  ", YELLOW);
-            center(height / 2 + 1, "BIBLIOTECASQL  |  v0.8.3", WHITE);
+            center(height / 2 + 1, "BIBLIOTECASQL  |  v0.8.4", WHITE);
             center(height / 2 + 3, "Ingeniería de Software · Bases de Datos", CYAN);
             center(height / 2 + 5, "Monograma tipográfico, no escudo oficial", GREY);
             screen.refresh();
@@ -137,8 +143,8 @@ public final class ClassicTui implements AutoCloseable {
         String error = "";
         while (true) {
             frame("CATÁLOGO DE LIBROS", teaching
-                ? "1 Buscar   2 Java/SQL   3 Ver SQL   ↑↓ Mover   0 Volver"
-                : "1 Buscar   2 Java/SQL   ↑↓ Mover   ENTER Detalle   0 Volver");
+                ? "1 Buscar  2 Java/SQL  3 SQL  4 Alta  5 Editar  6 Borrar  0 Volver"
+                : "1 Buscar  2 Java/SQL  4 Alta  5 Editar  6 Borrar  0 Volver");
             line(3, 3, "Filtro: " + (searching ? "[" + search + "_]" : search.isEmpty() ? "(sin filtro)" : search), YELLOW);
             line(3, 4, "Modo: " + (sqlMode ? "PostgreSQL (ILIKE)" : "Java (memoria)") +
                 "     Coincidencias: " + filtered.size() + "/" + complete.size(), CYAN);
@@ -184,6 +190,32 @@ public final class ClassicTui implements AutoCloseable {
                 continue;
             }
             else if (ch == '3' && teaching) { sqlWindow("BÚSQUEDA DE LIBROS"); continue; }
+            else if (ch == '4') {
+                editBook(null);
+                complete = service.listBooks(); filtered = complete;
+                search = ""; selected = offset = 0;
+                continue;
+            }
+            else if (ch == '5' && !filtered.isEmpty()) {
+                editBook(service.bookDetails(filtered.get(selected).id()));
+                complete = service.listBooks(); filtered = complete;
+                search = ""; selected = offset = 0;
+                continue;
+            }
+            else if (ch == '6' && !filtered.isEmpty()) {
+                Book target = filtered.get(selected);
+                if (confirm("ELIMINAR LIBRO", "¿Eliminar «" + target.title() + "»?")) {
+                    try {
+                        service.deleteBook(target.id());
+                        message("OPERACIÓN CORRECTA", "El libro se eliminó correctamente.");
+                    } catch (SQLException | IllegalArgumentException ex) {
+                        showFailure("No se pudo eliminar el libro", ex);
+                    }
+                    complete = service.listBooks(); filtered = complete;
+                    search = ""; selected = offset = 0;
+                }
+                continue;
+            }
             else if (type == KeyType.ArrowUp) { selected = Math.max(0, selected - 1); continue; }
             else if (type == KeyType.ArrowDown) { selected = Math.min(filtered.size() - 1, selected + 1); continue; }
             else if (type == KeyType.PageUp) { selected = Math.max(0, selected - visible); continue; }
@@ -252,20 +284,242 @@ public final class ClassicTui implements AutoCloseable {
         }
     }
 
+    // Elegimos usuarios y libros desde listas; los identificadores se toman internamente.
     private void borrow() throws IOException, SQLException {
-        String user = input("REGISTRAR PRÉSTAMO", "ID del usuario (0 cancela): ");
-        if (user == null || user.equals("0")) return;
-        String book = input("REGISTRAR PRÉSTAMO", "ID del libro (0 cancela): ");
-        if (book == null || book.equals("0")) return;
-        int id = service.borrow(parseId(user), parseId(book));
-        message("OPERACIÓN COMPLETADA", "Préstamo registrado con ID: " + id);
+        List<LibraryUser> users = service.activeUsers();
+        int userChoice = choose("SELECCIONE USUARIO", users.stream()
+                .map(u -> u.name()).toList());
+        if (userChoice < 0) return;
+        List<Book> available = service.listBooks().stream().filter(Book::available).toList();
+        int bookChoice = choose("SELECCIONE LIBRO DISPONIBLE", available.stream()
+                .map(Book::title).toList());
+        if (bookChoice < 0) return;
+        Book book = available.get(bookChoice);
+        if (!confirm("CONFIRMAR PRÉSTAMO", "¿Prestar «" + book.title() + "»?")) return;
+        try {
+            int loanId = service.borrow(users.get(userChoice).id(), book.id());
+            message("OPERACIÓN CORRECTA", "Préstamo registrado correctamente. Referencia: " + loanId);
+        } catch (SQLException | IllegalArgumentException ex) {
+            showFailure("No se pudo registrar el préstamo", ex);
+        }
     }
+
     private void giveBack() throws IOException, SQLException {
-        String loan = input("REGISTRAR DEVOLUCIÓN", "ID del préstamo (0 cancela): ");
-        if (loan == null || loan.equals("0")) return;
-        service.returnBook(parseId(loan));
-        message("OPERACIÓN COMPLETADA", "La devolución quedó registrada.");
+        List<Loan> loans = service.activeLoans();
+        int choice = choose("SELECCIONE PRÉSTAMO A DEVOLVER", loans.stream()
+                .map(l -> l.title() + " · " + l.user()).toList());
+        if (choice < 0) return;
+        if (!confirm("CONFIRMAR DEVOLUCIÓN", "¿Registrar la devolución del libro seleccionado?")) return;
+        try {
+            service.returnBook(loans.get(choice).id());
+            message("OPERACIÓN CORRECTA", "La devolución se registró correctamente.");
+        } catch (SQLException | IllegalArgumentException ex) {
+            showFailure("No se pudo registrar la devolución", ex);
+        }
     }
+
+    // Permitimos consultar, modificar el plazo o cancelar préstamos abiertos.
+    private void manageLoans() throws IOException, SQLException {
+        while (true) {
+            List<Loan> loans = service.activeLoans();
+            int choice = choose("PRÉSTAMOS ACTIVOS", loans.stream()
+                    .map(l -> l.title() + " | " + l.user() + " | " + l.dueDate()).toList());
+            if (choice < 0) return;
+            Loan selectedLoan = loans.get(choice);
+            int action = menu("GESTIÓN DEL PRÉSTAMO", new String[]{
+                    "Consultar detalles", "Modificar fecha límite", "Registrar devolución", "Cancelar préstamo"},
+                    "1-4 Elegir   0 Volver");
+            if (action == 1) {
+                message("DETALLE DEL PRÉSTAMO", selectedLoan.user() + " | " + selectedLoan.title()
+                        + " | Fecha límite: " + selectedLoan.dueDate());
+            } else if (action == 2) {
+                String value = modalInput("MODIFICAR PLAZO", "Fecha límite AAAA-MM-DD", selectedLoan.dueDate().toString(), 10);
+                if (value == null) continue;
+                try {
+                    LocalDate date = LocalDate.parse(value);
+                    service.changeDueDate(selectedLoan.id(), date);
+                    message("OPERACIÓN CORRECTA", "La fecha límite se actualizó correctamente.");
+                } catch (java.time.format.DateTimeParseException ex) {
+                    message("DATO INCORRECTO", "Utilice el formato AAAA-MM-DD.");
+                } catch (SQLException | IllegalArgumentException ex) {
+                    showFailure("No se pudo modificar el préstamo", ex);
+                }
+            } else if (action == 3) {
+                if (!confirm("CONFIRMAR DEVOLUCIÓN", "¿Registrar la devolución?")) continue;
+                try {
+                    service.returnBook(selectedLoan.id());
+                    message("OPERACIÓN CORRECTA", "Devolución registrada correctamente.");
+                } catch (SQLException | IllegalArgumentException ex) {
+                    showFailure("No se pudo registrar la devolución", ex);
+                }
+            } else if (action == 4) {
+                if (!confirm("CANCELAR PRÉSTAMO", "¿Cancelar este préstamo activo?")) continue;
+                try {
+                    service.cancelLoan(selectedLoan.id());
+                    message("OPERACIÓN CORRECTA", "Préstamo cancelado; libro disponible nuevamente.");
+                } catch (SQLException | IllegalArgumentException ex) {
+                    showFailure("No se pudo cancelar el préstamo", ex);
+                }
+            }
+        }
+    }
+
+    // Solicitamos los campos del libro en ventanas pequeñas y validamos antes de guardar.
+    private void editBook(BookDetails previous) throws IOException, SQLException {
+        boolean create = previous == null;
+        String title = create ? "AGREGAR LIBRO" : "MODIFICAR LIBRO";
+        List<Author> authors = service.authors();
+        int authorChoice = choose("SELECCIONE AUTOR", authors.stream().map(Author::name).toList());
+        if (authorChoice < 0) return;
+        String name = modalInput(title, "Título", create ? "" : previous.title(), 180);
+        if (name == null) return;
+        String isbn = modalInput(title, "ISBN", create ? "" : previous.isbn(), 20);
+        if (isbn == null) return;
+        String year = modalInput(title, "Año de publicación", create ? "2026" : String.valueOf(previous.year()), 4);
+        if (year == null) return;
+        String category = modalInput(title, "Categoría", create ? "" : previous.category(), 80);
+        if (category == null) return;
+        String publisher = modalInput(title, "Editorial", create ? "" : previous.publisher(), 100);
+        if (publisher == null) return;
+        String pages = modalInput(title, "Número de páginas", create ? "100" : String.valueOf(previous.pages()), 8);
+        if (pages == null) return;
+        String price = modalInput(title, "Precio", create ? "0.00" : previous.price().toPlainString(), 16);
+        if (price == null) return;
+        try {
+            BookDetails book = new BookDetails(create ? 0 : previous.id(), name.trim(), isbn.trim(),
+                    Integer.parseInt(year.trim()), category.trim(), publisher.trim(),
+                    Integer.parseInt(pages.trim()), new BigDecimal(price.trim()),
+                    create || previous.available(), authors.get(authorChoice).id());
+            if (!confirm(title, "¿Guardar los cambios de «" + book.title() + "»?")) return;
+            if (create) {
+                int id = service.addBook(book);
+                message("OPERACIÓN CORRECTA", "Libro agregado correctamente. Referencia: " + id);
+            } else {
+                service.updateBook(book);
+                message("OPERACIÓN CORRECTA", "El libro se actualizó correctamente.");
+            }
+        } catch (NumberFormatException ex) {
+            message("DATO INCORRECTO", "Año, páginas y precio deben contener valores numéricos válidos.");
+        } catch (SQLException | IllegalArgumentException ex) {
+            showFailure("No se pudo guardar el libro", ex);
+        }
+    }
+
+    // Mostramos errores breves, incluidas las restricciones de integridad de PostgreSQL.
+    private void showFailure(String context, Exception ex) throws IOException {
+        String reason = ex.getMessage() == null ? "Error no especificado" : ex.getMessage();
+        if (ex instanceof SQLException sql) {
+            if ("23505".equals(sql.getSQLState())) reason = "Ya existe un registro con ese ISBN.";
+            if ("23503".equals(sql.getSQLState())) reason = "El registro tiene relaciones asociadas o el autor no existe.";
+            if ("23514".equals(sql.getSQLState())) reason = "Algún valor no cumple las reglas de la tabla.";
+        }
+        message("OPERACIÓN NO COMPLETADA", context + ". " + reason);
+    }
+
+    // Separamos selección y edición: en ningún formulario solicitamos el ID interno.
+    private int choose(String title, List<String> options) throws IOException {
+        if (options.isEmpty()) { message(title, "No hay registros disponibles."); return -1; }
+        int selected = 0;
+        int offset = 0;
+        String search = "";
+        boolean editing = false;
+        while (true) {
+            List<Integer> matches = new ArrayList<>();
+            for (int i = 0; i < options.size(); i++)
+                if (options.get(i).toLowerCase(Locale.ROOT).contains(search.toLowerCase(Locale.ROOT)))
+                    matches.add(i);
+            selected = Math.max(0, Math.min(selected, matches.size() - 1));
+            frame(title, "/ Buscar   ↑↓ Seleccionar   ENTER Abrir   0 Volver");
+            line(4, 3, "Buscar: " + (editing ? search + "_" : search.isBlank() ? "(todos)" : search), CYAN);
+            int page = Math.max(1, height - 11);
+            if (selected < offset) offset = selected;
+            if (selected >= offset + page) offset = selected - page + 1;
+            for (int i = offset; i < matches.size() && i < offset + page; i++) {
+                line(4, 5 + i - offset, (i == selected ? "▶ " : "  ")
+                        + fit(options.get(matches.get(i)), width - 12), i == selected ? YELLOW : WHITE);
+            }
+            line(4, height - 3, "Registro " + (matches.isEmpty() ? 0 : selected + 1)
+                    + "/" + matches.size(), CYAN);
+            scrollMarker(width - 4, 5, page, matches.size(), offset);
+            screen.refresh();
+            KeyStroke key = nextKey();
+            if (key == null) continue;
+            KeyType type = key.getKeyType();
+            char ch = type == KeyType.Character ? key.getCharacter() : '\0';
+            if (type == KeyType.Escape) { if (editing) editing = false; else return -1; }
+            else if (editing) {
+                if (type == KeyType.Enter) editing = false;
+                else if (type == KeyType.Backspace && !search.isEmpty()) search = search.substring(0, search.length() - 1);
+                else if (type == KeyType.Character && !Character.isISOControl(ch) && search.length() < 80) search += ch;
+                selected = offset = 0;
+            } else if (ch == '0') return -1;
+            else if (ch == '/') editing = true;
+            else if (type == KeyType.Enter && !matches.isEmpty()) return matches.get(selected);
+            else if (type == KeyType.ArrowDown) selected = Math.min(matches.size() - 1, selected + 1);
+            else if (type == KeyType.ArrowUp) selected = Math.max(0, selected - 1);
+            else if (type == KeyType.PageDown) selected = Math.min(matches.size() - 1, selected + page);
+            else if (type == KeyType.PageUp) selected = Math.max(0, selected - page);
+            else if (type == KeyType.Home) selected = 0;
+            else if (type == KeyType.End) selected = Math.max(0, matches.size() - 1);
+        }
+    }
+
+    // Redibujamos una ventana emergente y recogemos texto de cualquier campo.
+    private String modalInput(String title, String label, String initial, int limit) throws IOException {
+        StringBuilder text = new StringBuilder(initial == null ? "" : initial);
+        while (true) {
+            frame(title, "Escribir   ENTER Guardar campo   ESC Cancelar");
+            int left = Math.max(3, width / 8), top = Math.max(4, height / 2 - 4);
+            int boxWidth = Math.max(30, width - left * 2);
+            modalBox(left, top, boxWidth, 8, title);
+            line(left + 2, top + 2, fit(label, boxWidth - 5), YELLOW);
+            String value = text.toString();
+            line(left + 2, top + 4, fit(value, boxWidth - 6) + "_", WHITE);
+            screen.refresh();
+            KeyStroke key = nextKey();
+            if (key == null) continue;
+            if (key.getKeyType() == KeyType.Escape) return null;
+            if (key.getKeyType() == KeyType.Enter) return value;
+            if (key.getKeyType() == KeyType.Backspace && text.length() > 0) text.deleteCharAt(text.length() - 1);
+            if (key.getKeyType() == KeyType.Character && !Character.isISOControl(key.getCharacter())
+                    && text.length() < limit) text.append(key.getCharacter());
+        }
+    }
+
+    // Pedimos confirmación antes de alterar información almacenada.
+    private boolean confirm(String title, String question) throws IOException {
+        while (true) {
+            frame(title, "S Confirmar   N Cancelar");
+            int left = Math.max(3, width / 8), top = Math.max(4, height / 2 - 3);
+            int boxWidth = Math.max(30, width - left * 2);
+            modalBox(left, top, boxWidth, 7, title);
+            line(left + 2, top + 2, fit(question, boxWidth - 5), WHITE);
+            line(left + 2, top + 4, "[S] Sí      [N] No", YELLOW);
+            screen.refresh();
+            KeyStroke key = nextKey();
+            if (key == null) continue;
+            if (key.getKeyType() == KeyType.Escape) return false;
+            if (key.getKeyType() == KeyType.Character) {
+                char choice = Character.toLowerCase(key.getCharacter());
+                if (choice == 's') return true;
+                if (choice == 'n' || choice == '0') return false;
+            }
+        }
+    }
+
+    private void modalBox(int x, int y, int w, int h, String title) {
+        graphics.setBackgroundColor(BLACK);
+        graphics.setForegroundColor(WHITE);
+        graphics.fillRectangle(new com.googlecode.lanterna.TerminalPosition(x, y),
+                new TerminalSize(Math.min(w, width - x - 1), Math.min(h, height - y - 2)), ' ');
+        line(x, y, "┌" + "─".repeat(Math.max(0, w - 2)) + "┐", WHITE);
+        for (int i = 1; i < h - 1; i++) {
+            line(x, y + i, "│", WHITE);
+            line(x + w - 1, y + i, "│", WHITE);
+        }
+        line(x, y + h - 1, "└" + "─".repeat(Math.max(0, w - 2)) + "┘", WHITE);
+    }
+
     private int parseId(String text) {
         try {
             int id = Integer.parseInt(text.trim());
@@ -356,18 +610,27 @@ public final class ClassicTui implements AutoCloseable {
         }
     }
 
+    // Mostramos el resultado de la operación en una ventana emergente.
     private void message(String title, String message) throws IOException {
         while (true) {
-            frame(title, teaching ? "ENTER / ESC Volver   3 Ver SQL" : "ENTER / ESC Volver");
-            int max = Math.max(12, width - 10);
-            for (int i = 0; i < message.length(); i += max)
-                line(5, Math.max(4, height / 2 - 2) + i / max, message.substring(i, Math.min(message.length(), i + max)), WHITE);
+            frame("BIBLIOTECASQL", teaching ? "ENTER / ESC Volver   3 Ver SQL" : "ENTER / ESC Volver");
+            int left = Math.max(3, width / 10);
+            int boxWidth = Math.max(30, width - left * 2);
+            int top = Math.max(4, height / 2 - 4);
+            modalBox(left, top, boxWidth, 8, title);
+            String content = message == null ? "" : message;
+            int lineWidth = Math.max(15, boxWidth - 6);
+            List<String> lines = wrap(content, lineWidth);
+            for (int i = 0; i < Math.min(3, lines.size()); i++) {
+                line(left + 2, top + 2 + i, lines.get(i), WHITE);
+            }
+            line(left + 2, top + 6, "ENTER / ESC  Continuar", YELLOW);
             screen.refresh();
             KeyStroke key = nextKey();
-            if (key != null && key.getKeyType() == KeyType.Character
-                    && key.getCharacter() == '3' && teaching) {
+            if (key == null) continue;
+            if (key.getKeyType() == KeyType.Character && key.getCharacter() == '3' && teaching) {
                 sqlWindow(title);
-            } else if (key != null) {
+            } else if (key.getKeyType() == KeyType.Enter || key.getKeyType() == KeyType.Escape) {
                 return;
             }
         }
@@ -380,6 +643,7 @@ public final class ClassicTui implements AutoCloseable {
 
         int current = entries.size() - 1;
         int scroll = 0;
+        int selectedLine = 0;
         int view = 1;
 
         while (true) {
@@ -396,7 +660,8 @@ public final class ClassicTui implements AutoCloseable {
                 }
             } else if (view == 2) {
                 heading = "CÓDIGO JAVA · " + source.location();
-                lines.addAll(source.lines());
+                for (String javaLine : source.lines())
+                    lines.addAll(wrap(javaLine, Math.max(15, width - 11)));
             } else {
                 heading = view == 3 ? "EXPLICACIÓN SQL" : "EXPLICACIÓN JAVA";
                 String explanation = view == 3
@@ -415,17 +680,20 @@ public final class ClassicTui implements AutoCloseable {
                 line(width - 4, y, "│", WHITE);
             }
             int capacity = Math.max(1, height - 9);
+            selectedLine = Math.max(0, Math.min(selectedLine, Math.max(0, lines.size() - 1)));
+            if (selectedLine < scroll) scroll = selectedLine;
+            if (selectedLine >= scroll + capacity) scroll = selectedLine - capacity + 1;
             scroll = Math.min(scroll, Math.max(0, lines.size() - capacity));
             for (int i = 0; i < capacity && i + scroll < lines.size(); i++) {
                 String row = lines.get(i + scroll);
-                line(4, 5 + i, i == 0 ? "▶" : " ", YELLOW);
+                line(4, 5 + i, i + scroll == selectedLine ? "▶" : " ", YELLOW);
                 if (view == 1) coloredSqlLine(5, 5 + i, row);
                 else if (view == 2) coloredJavaLine(5, 5 + i, row);
                 else line(5, 5 + i, row, WHITE);
             }
             line(4, height - 3, "Líneas " + (lines.isEmpty() ? 0 : scroll + 1) + "–"
                 + Math.min(lines.size(), scroll + capacity) + "/" + lines.size()
-                + "  ↑↓ Desplazar  PgUp/PgDn Página  Inicio/Fin", CYAN);
+                + "  Selección " + (selectedLine + 1) + "  ↑↓ Mover  PgUp/PgDn", CYAN);
             scrollMarker(width - 5, 5, capacity, lines.size(), scroll);
             screen.refresh();
             KeyStroke key = nextKey();
@@ -433,15 +701,15 @@ public final class ClassicTui implements AutoCloseable {
             KeyType type = key.getKeyType();
             char ch = type == KeyType.Character ? key.getCharacter() : '\0';
             if (type == KeyType.Escape || ch == '0') return;
-            if (type == KeyType.ArrowUp) scroll = Math.max(0, scroll - 1);
-            if (type == KeyType.ArrowDown) scroll = Math.min(Math.max(0, lines.size() - capacity), scroll + 1);
-            if (type == KeyType.PageUp) scroll = Math.max(0, scroll - capacity);
-            if (type == KeyType.PageDown) scroll = Math.min(Math.max(0, lines.size() - capacity), scroll + capacity);
-            if (type == KeyType.Home) scroll = 0;
-            if (type == KeyType.End) scroll = Math.max(0, lines.size() - capacity);
-            if (type == KeyType.ArrowLeft) { current = Math.max(0, current - 1); scroll = 0; }
-            if (type == KeyType.ArrowRight) { current = Math.min(entries.size() - 1, current + 1); scroll = 0; }
-            if (ch >= '1' && ch <= '4') { view = ch - '0'; scroll = 0; }
+            if (type == KeyType.ArrowUp) selectedLine = Math.max(0, selectedLine - 1);
+            if (type == KeyType.ArrowDown) selectedLine = Math.min(Math.max(0, lines.size() - 1), selectedLine + 1);
+            if (type == KeyType.PageUp) selectedLine = Math.max(0, selectedLine - capacity);
+            if (type == KeyType.PageDown) selectedLine = Math.min(Math.max(0, lines.size() - 1), selectedLine + capacity);
+            if (type == KeyType.Home) selectedLine = 0;
+            if (type == KeyType.End) selectedLine = Math.max(0, lines.size() - 1);
+            if (type == KeyType.ArrowLeft) { current = Math.max(0, current - 1); scroll = selectedLine = 0; }
+            if (type == KeyType.ArrowRight) { current = Math.min(entries.size() - 1, current + 1); scroll = selectedLine = 0; }
+            if (ch >= '1' && ch <= '4') { view = ch - '0'; scroll = selectedLine = 0; }
         }
     }
 

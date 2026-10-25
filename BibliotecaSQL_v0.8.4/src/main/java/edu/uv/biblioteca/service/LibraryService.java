@@ -42,4 +42,47 @@ public final class LibraryService {
     public LabResult labRun(int number) throws SQLException { return laboratory.run(number); }
     public List<String> labTitles(int activity) { return laboratory.titles(activity); }
     public LabResult labRun(int activity, int number) throws SQLException { return laboratory.run(activity, number); }
+    // Validamos el formulario antes de enviar los valores al DAO.
+    private void validateBook(BookDetails b) {
+        if (b.title() == null || b.title().isBlank() || b.title().length() > 180)
+            throw new IllegalArgumentException("El título es obligatorio y admite hasta 180 caracteres.");
+        if (b.isbn() == null || b.isbn().isBlank() || b.isbn().length() > 20)
+            throw new IllegalArgumentException("El ISBN es obligatorio y admite hasta 20 caracteres.");
+        if (b.category() == null || b.category().isBlank() || b.category().length() > 80)
+            throw new IllegalArgumentException("La categoría es obligatoria y admite hasta 80 caracteres.");
+        if (b.publisher() != null && b.publisher().length() > 100)
+            throw new IllegalArgumentException("La editorial admite hasta 100 caracteres.");
+        if (b.year() < 1450 || b.year() > java.time.Year.now().getValue() + 1)
+            throw new IllegalArgumentException("Revise el año de publicación.");
+        if (b.pages() <= 0 || b.price() == null || b.price().signum() < 0 || b.price().scale() > 2
+                || b.price().compareTo(new java.math.BigDecimal("999999.99")) > 0 || b.authorId() <= 0)
+            throw new IllegalArgumentException("Revise páginas, precio y autor.");
+    }
+
+    public BookDetails bookDetails(int id) throws SQLException { return books.details(id); }
+    public List<Author> authors() throws SQLException { return books.authors(); }
+    public List<LibraryUser> activeUsers() throws SQLException { return loans.users(); }
+
+    public int addBook(BookDetails b) throws SQLException {
+        validateBook(b);
+        transactions.requireOperationalDatabase();
+        return books.insert(b);
+    }
+
+    public void updateBook(BookDetails b) throws SQLException {
+        validateBook(b);
+        transactions.requireOperationalDatabase();
+        books.update(b);
+    }
+
+    public void deleteBook(int id) throws SQLException {
+        transactions.requireOperationalDatabase();
+        books.delete(id);
+    }
+
+    public void changeDueDate(int loanId, java.time.LocalDate date) throws SQLException {
+        transactions.changeDueDate(loanId, date);
+    }
+
+    public void cancelLoan(int loanId) throws SQLException { transactions.cancelLoan(loanId); }
 }
