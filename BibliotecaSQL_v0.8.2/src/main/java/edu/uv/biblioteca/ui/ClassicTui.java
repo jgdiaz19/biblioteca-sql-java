@@ -90,7 +90,7 @@ public final class ClassicTui implements AutoCloseable {
             center(height / 2 - 3, "╚██╗ ██╔╝╚██╗ ██╔╝", YELLOW);
             center(height / 2 - 2, " ╚████╔╝  ╚████╔╝ ", YELLOW);
             center(height / 2 - 1, "  ╚═══╝    ╚═══╝  ", YELLOW);
-            center(height / 2 + 1, "BIBLIOTECASQL  |  v0.8", WHITE);
+            center(height / 2 + 1, "BIBLIOTECASQL  |  v0.8.2", WHITE);
             center(height / 2 + 3, "Ingeniería de Software · Bases de Datos", CYAN);
             center(height / 2 + 5, "Monograma tipográfico, no escudo oficial", GREY);
             screen.refresh();
@@ -359,45 +359,41 @@ public final class ClassicTui implements AutoCloseable {
         }
     }
 
-    /** Abre una ventana para estudiar las sentencias que ejecutó JDBC. */
+    /** Presentamos el SQL, el código Java real y sus explicaciones en vistas separadas. */
     private void sqlWindow(String title) throws IOException {
         List<SqlTrace.Entry> entries = SqlTrace.snapshot();
-        if (entries.isEmpty()) {
-            return;
-        }
+        if (entries.isEmpty()) return;
 
         int current = entries.size() - 1;
         int scroll = 0;
-        boolean explanation = false;
+        int view = 1;
 
         while (true) {
             frame("MODO DIDÁCTICO · " + title,
-                "←→ Sentencia   ↑↓ Desplazar   2 SQL/Explicación   0 Cerrar");
+                "1 SQL  2 Java  3 Exp. SQL  4 Exp. Java  ←→ Sentencia  ↑↓ Leer  0 Salir");
             SqlTrace.Entry entry = entries.get(current);
-
-            // Presentamos el SQL o su explicación en vistas separadas.
+            JavaSourceView.Source source = JavaSourceView.forEntry(entry);
             List<String> lines = new ArrayList<>();
-            if (explanation) {
-                String content = sqlExplanation.isBlank()
-                    ? SqlExplanation.describe(entry.sql()) : sqlExplanation;
-                lines.add("EXPLICACIÓN DE LA CONSULTA");
-                for (String paragraph : content.split("\\R", -1)) {
-                    lines.addAll(wrap(paragraph, Math.max(15, width - 11)));
-                }
-                lines.add("");
-                lines.add("Pulse 2 para volver al código SQL.");
-            } else {
-                lines.add("SQL EJECUTADO:");
+            String heading;
+            if (view == 1) {
+                heading = "SENTENCIA SQL EJECUTADA";
                 for (String sqlLine : entry.sql().split("\\R", -1)) {
                     lines.addAll(wrap(sqlLine, Math.max(15, width - 11)));
                 }
-                lines.add("");
-                lines.add("PARÁMETROS JDBC:");
-                if (entry.parameters().isEmpty()) lines.add("Sin parámetros");
-                else lines.addAll(entry.parameters());
+            } else if (view == 2) {
+                heading = "CÓDIGO JAVA · " + source.location();
+                lines.addAll(source.lines());
+            } else {
+                heading = view == 3 ? "EXPLICACIÓN SQL" : "EXPLICACIÓN JAVA";
+                String explanation = view == 3
+                    ? LearningGuide.sqlExplanation(entry, sqlExplanation)
+                    : LearningGuide.javaExplanation(entry);
+                for (String paragraph : explanation.split("\\R", -1)) {
+                    lines.addAll(wrap(paragraph, Math.max(15, width - 11)));
+                }
             }
             line(4, 3, "Sentencia " + (current + 1) + " de " + entries.size()
-                + (explanation ? "  |  EXPLICACIÓN" : "  |  CÓDIGO SQL"), YELLOW);
+                + " | " + heading, YELLOW);
             horizontal(3, 4, width - 6);
             horizontal(3, height - 4, width - 6);
             for (int y = 5; y < height - 4; y++) {
@@ -406,18 +402,11 @@ public final class ClassicTui implements AutoCloseable {
             }
             int capacity = Math.max(1, height - 10);
             scroll = Math.min(scroll, Math.max(0, lines.size() - capacity));
-            // Coloreamos únicamente las líneas de SQL; no los textos de ayuda.
-            boolean sqlSection = false;
             for (int i = 0; i < capacity && i + scroll < lines.size(); i++) {
                 String row = lines.get(i + scroll);
-                if (row.equals("SQL EJECUTADO:")) sqlSection = true;
-                else if (row.equals("PARÁMETROS JDBC:")) sqlSection = false;
-                if (!explanation && sqlSection && !row.equals("SQL EJECUTADO:")) {
-                    coloredSqlLine(5, 5 + i, row);
-                } else {
-                    line(5, 5 + i, row,
-                        row.endsWith(":") || row.equals("EXPLICACIÓN DE LA CONSULTA") ? YELLOW : WHITE);
-                }
+                if (view == 1) coloredSqlLine(5, 5 + i, row);
+                else if (view == 2) coloredJavaLine(5, 5 + i, row);
+                else line(5, 5 + i, row, WHITE);
             }
             screen.refresh();
             KeyStroke key = nextKey();
@@ -431,7 +420,24 @@ public final class ClassicTui implements AutoCloseable {
             if (type == KeyType.PageDown) scroll = Math.min(Math.max(0, lines.size() - capacity), scroll + capacity);
             if (type == KeyType.ArrowLeft) { current = Math.max(0, current - 1); scroll = 0; }
             if (type == KeyType.ArrowRight) { current = Math.min(entries.size() - 1, current + 1); scroll = 0; }
-            if (ch == '2') { explanation = !explanation; scroll = 0; }
+            if (ch >= '1' && ch <= '4') { view = ch - '0'; scroll = 0; }
+        }
+    }
+
+    // Coloreamos palabras reservadas, tipos, literales y comentarios de Java.
+    private void coloredJavaLine(int x, int y, String source) {
+        int position = x;
+        for (JavaSyntax.Part part : JavaSyntax.tokenize(source)) {
+            TextColor color = switch (part.kind()) {
+                case KEYWORD -> SQL_KEYWORD;
+                case TYPE -> SQL_FUNCTION;
+                case STRING -> SQL_STRING;
+                case NUMBER -> SQL_NUMBER;
+                case COMMENT -> SQL_COMMENT;
+                default -> WHITE;
+            };
+            line(position, y, part.text(), color);
+            position += part.text().length();
         }
     }
 

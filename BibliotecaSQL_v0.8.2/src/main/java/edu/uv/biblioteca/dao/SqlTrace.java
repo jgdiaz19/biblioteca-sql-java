@@ -17,7 +17,7 @@ public final class SqlTrace {
 
     private SqlTrace() { }
 
-    public record Entry(String sql, List<String> parameters) { }
+    public record Entry(String sql, List<String> parameters, String sourceClass, int sourceLine, String sourceMethod) { }
 
     // Devolvemos una copia para que la interfaz no modifique el historial.
     public static synchronized List<Entry> snapshot() {
@@ -30,10 +30,11 @@ public final class SqlTrace {
     }
 
     // Registramos solamente las sentencias que llegan al método execute de JDBC.
-    private static synchronized void add(String sql, Map<Integer, String> values) {
+    private static synchronized void add(String sql, Map<Integer, String> values, StackTraceElement origin) {
         List<String> parameters = new ArrayList<>();
         values.forEach((index, value) -> parameters.add(index + " = " + value));
-        HISTORY.add(new Entry(sql.strip(), List.copyOf(parameters)));
+        HISTORY.add(new Entry(sql.strip(), List.copyOf(parameters),
+            origin.getClassName(), origin.getLineNumber(), origin.getMethodName()));
         if (HISTORY.size() > MAX_ENTRIES) {
             HISTORY.remove(0);
         }
@@ -43,6 +44,12 @@ public final class SqlTrace {
     public static PreparedStatement prepare(Connection connection, String sql) throws SQLException {
         PreparedStatement actual = connection.prepareStatement(sql);
         Map<Integer, String> values = new TreeMap<>();
+        // Identificamos el método Java que preparó esta consulta.
+        StackTraceElement origin = StackWalker.getInstance().walk(frames -> frames
+            .filter(frame -> !frame.getClassName().equals(SqlTrace.class.getName()))
+            .findFirst()
+            .map(StackWalker.StackFrame::toStackTraceElement)
+            .orElse(new StackTraceElement("", "", "", -1)));
 
         // Interceptamos los métodos setX para recordar los parámetros de búsqueda.
         return (PreparedStatement) Proxy.newProxyInstance(
@@ -61,7 +68,7 @@ public final class SqlTrace {
                     }
                     if (name.equals("executeQuery") || name.equals("executeUpdate")
                             || name.equals("executeLargeUpdate") || name.equals("execute")) {
-                        add(sql, values);
+                        add(sql, values, origin);
                     }
                     try {
                         return method.invoke(actual, arguments);

@@ -1,4 +1,4 @@
-# BibliotecaSQL v0.8.1
+# BibliotecaSQL v0.8.2
 
 Aplicación didáctica de gestión bibliotecaria con Java 17, JDBC, PostgreSQL, Docker Compose y una interfaz clásica de texto mediante Lanterna.
 
@@ -62,3 +62,7 @@ en cian, las cadenas en verde, los números en naranja y los comentarios en gris
 Los colores solo afectan a la presentación: las sentencias y los parámetros enviados a
 PostgreSQL permanecen iguales. Las explicaciones automáticas son orientativas y no
 sustituyen el análisis del plan de ejecución.
+
+## Modo didáctico 0.8.2
+
+Las teclas `1`, `2`, `3` y `4` muestran SQL, el código Java real cercano a la llamada JDBC, su explicación SQL y una guía de lectura Java. Para cargar el archivo de origen, ejecute Maven desde la raíz del repositorio. Consulte `docs/13-lectura-sql-y-java.md`.
