@@ -1,4 +1,4 @@
-# BibliotecaSQL — versión 0.4
+# BibliotecaSQL — versión 0.5
 
 Aplicación didáctica de consola desarrollada en Java 17, PostgreSQL y JDBC. El objetivo es relacionar los contenidos del segundo parcial de Bases de Datos con un sistema bibliotecario tradicional.
 
@@ -48,9 +48,21 @@ El modelo original incluye `autores`, `libros`, `usuarios` y `prestamos`. No tie
 - `docs/04-laboratorio.md`: consultas y ejercicios del laboratorio.
 - `docs/05-reportes.md`: reportes de vencidos y usuarios.
 - `docs/06-guia-codigo.md`: recorrido para leer el código fuente.
+- `docs/07-pruebas.md`: ejecución y alcance de las pruebas.
+- `docs/08-matriz-trazabilidad.md`: correspondencia entre consultas y contenidos del segundo parcial.
 
 ## Pruebas
 
-Se puede compilar el código fuente mediante `javac` para verificar sintaxis. La prueba funcional completa requiere Maven, el controlador PostgreSQL JDBC y un servidor PostgreSQL en ejecución. Antes de utilizar esta versión en clase, compruebe un préstamo, una devolución y los reportes en un entorno local con Docker.
+Para ejecutar las pruebas de la interfaz y de las transacciones en una base independiente:
+
+```bash
+bash scripts/probar-integracion.sh
+```
+
+Este script inicia PostgreSQL de pruebas en `127.0.0.1:55433`, ejecuta `mvn test` y elimina el entorno temporal. **No borra los datos del contenedor de trabajo**. Para ejecutar solamente las pruebas de interfaz, utilice `mvn test` sin `DB_TEST_URL`.
+
+Se incluyen diez pruebas JUnit: tres de consola y siete de integración. Las pruebas de integración quedan omitidas si no se ejecutan mediante el entorno de prueba. Esta entrega no se ha ejecutado contra Docker desde el entorno de construcción, por lo que es necesario validar la suite en un equipo con Docker y Maven disponibles.
+
+Lea `docs/07-pruebas.md` para conocer las verificaciones y `docs/08-matriz-trazabilidad.md` para revisar la correspondencia de los contenidos SQL con el código Java.
 
 Fuente de datos: https://gist.github.com/jgdiaz19/af0426289725f559646fec9654253a5f

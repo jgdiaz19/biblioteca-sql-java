@@ -38,7 +38,7 @@ public final class ConsoleView implements AutoCloseable {
     }
     public void menu(boolean teaching) {
         clear();
-        heading("BIBLIOTECASQL · V0.4 · POSTGRESQL");
+        heading("BIBLIOTECASQL · V0.5 · POSTGRESQL");
         out.println("  1. Catálogo de libros");
         out.println("  2. Buscar libros por título");
         out.println("  3. Préstamos activos");
@@ -66,9 +66,10 @@ public final class ConsoleView implements AutoCloseable {
     }
     // Recortamos valores extensos para mantener las columnas alineadas.
     public static String fit(String value, int length) {
-        if (value == null) return "";
+        if (value == null || length <= 0) return "";
         String clean = value.replaceAll("[\r\n\t]", " ");
         if (clean.length() <= length) return clean;
+        if (length == 1) return "…";
         return clean.substring(0, length - 1) + "…";
     }
     public void table(List<String> columns, List<List<String>> rows, int... widths) {
