@@ -497,23 +497,85 @@ public final class ClassicTui implements AutoCloseable {
         }
     }
 
-    // Elegimos una categoría o editorial de la lista para evitar variantes accidentales.
+    // Mostramos categorías y editoriales en una ventana sobre la pantalla principal.
+    // El primer elemento permite capturar un valor que aún no está registrado.
     private String chooseControlledValue(String title, List<String> values,
                                          String current, int maxLength, boolean optional)
             throws IOException {
-        List<String> options = new ArrayList<>();
-        // Las altas de valores se administran en su catálogo correspondiente.
-        // El formulario de libros solo permite escoger valores ya controlados.
-        if (optional) options.add("(Sin editorial)");
-        options.addAll(values);
-        if (current != null && !current.isBlank()
-                && values.stream().noneMatch(x -> x.equalsIgnoreCase(current.trim()))) {
-            options.add(current.trim());
+        while (true) {
+            List<String> options = new ArrayList<>();
+            options.add("+ Registrar " + (optional ? "nueva editorial" : "nueva categoría"));
+            if (optional) options.add("(Sin editorial)");
+            options.addAll(values);
+            int index = modalCatalogSelect(title, options, current);
+            if (index < 0) return null;
+            if (index > 0) {
+                if (optional && index == 1) return "";
+                return options.get(index);
+            }
+
+            // Capturamos el nuevo valor en otra ventana sin guardar todavía en PostgreSQL.
+            String value = modalInput("REGISTRAR " + title,
+                    optional ? "Nombre de la editorial" : "Nombre de la categoría", "", maxLength);
+            if (value == null) continue;
+            String normalized = value.trim().replaceAll("\\s+", " ");
+            if (normalized.isBlank()) {
+                message("DATO INCORRECTO", "El nombre no puede estar vacío.");
+                continue;
+            }
+            boolean exists = values.stream().anyMatch(v -> v.equalsIgnoreCase(normalized));
+            if (exists) {
+                message("VALOR EXISTENTE", "Ese nombre ya está registrado. Selecciónelo de la lista.");
+                continue;
+            }
+            // Solo devolvemos el texto; el catálogo se actualizará al guardar el libro.
+            return normalized;
         }
-        int index = choose(title, options);
-        if (index < 0) return null;
-        if (optional && index == 0) return "";
-        return options.get(index);
+    }
+
+    // Dibujamos una lista dentro de un recuadro y resaltamos el elemento actual.
+    private int modalCatalogSelect(String title, List<String> options, String current)
+            throws IOException {
+        int selected = 0;
+        int offset = 0;
+        for (int i = 0; i < options.size(); i++) {
+            if (current != null && options.get(i).equalsIgnoreCase(current)) {
+                selected = i;
+                break;
+            }
+        }
+        while (true) {
+            frame("REGISTRO DE LIBRO", "↑↓ Elegir   ENTER Aceptar   ESC Cancelar");
+            int boxWidth = Math.min(Math.max(38, width - 12), 76);
+            int boxHeight = Math.min(Math.max(10, height - 8), 19);
+            int left = Math.max(2, (width - boxWidth) / 2);
+            int top = Math.max(2, (height - boxHeight) / 2);
+            int page = Math.max(1, boxHeight - 6);
+            if (selected < offset) offset = selected;
+            if (selected >= offset + page) offset = selected - page + 1;
+
+            modalBox(left, top, boxWidth, boxHeight, title);
+            line(left + 2, top + 1, fit(title, boxWidth - 5), YELLOW);
+            for (int i = offset; i < options.size() && i < offset + page; i++) {
+                String item = (i == selected ? "▶ " : "  ") + options.get(i);
+                line(left + 2, top + 3 + i - offset, fit(item, boxWidth - 5),
+                        i == selected ? YELLOW : WHITE);
+            }
+            line(left + 2, top + boxHeight - 2,
+                    "↑↓ Seleccionar  ENTER Elegir  ESC Volver  " + (selected + 1) + "/" + options.size(), CYAN);
+            screen.refresh();
+            KeyStroke key = nextKey();
+            if (key == null) continue;
+            KeyType type = key.getKeyType();
+            if (type == KeyType.Escape) return -1;
+            if (type == KeyType.Enter) return selected;
+            if (type == KeyType.ArrowUp) selected = Math.max(0, selected - 1);
+            if (type == KeyType.ArrowDown) selected = Math.min(options.size() - 1, selected + 1);
+            if (type == KeyType.PageUp) selected = Math.max(0, selected - page);
+            if (type == KeyType.PageDown) selected = Math.min(options.size() - 1, selected + page);
+            if (type == KeyType.Home) selected = 0;
+            if (type == KeyType.End) selected = options.size() - 1;
+        }
     }
 
     // Permitimos elegir un autor registrado o capturar los datos de uno nuevo.
@@ -565,16 +627,12 @@ public final class ClassicTui implements AutoCloseable {
                     create || previous.available(), authorId);
             if (!confirm(title, "¿Guardar los cambios de «" + book.title() + "»?")) return;
 
-            if (create) {
-                int id = newAuthor
-                        ? service.addBookWithNewAuthor(book, authorName, nationality)
-                        : service.addBook(book);
-                message("OPERACIÓN CORRECTA", "Libro agregado correctamente. Referencia: " + id);
-            } else {
-                if (newAuthor) service.updateBookWithNewAuthor(book, authorName, nationality);
-                else service.updateBook(book);
-                message("OPERACIÓN CORRECTA", "El libro se actualizó correctamente.");
-            }
+            // Registramos el libro y sus nuevos valores relacionados en una sola transacción.
+            int savedId = service.saveBookWithSelections(book, create,
+                    newAuthor ? authorName : null, nationality);
+            message("OPERACIÓN CORRECTA", create
+                    ? "Libro agregado correctamente. Referencia: " + savedId
+                    : "El libro se actualizó correctamente.");
         } catch (NumberFormatException ex) {
             message("DATO INCORRECTO", "Año, páginas y precio deben contener valores numéricos válidos.");
         } catch (SQLException | IllegalArgumentException ex) {

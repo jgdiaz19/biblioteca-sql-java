@@ -174,6 +174,16 @@ public final class LibraryService {
         books.update(b);
     }
 
+    // Guardamos el libro y los catálogos nuevos en una única transacción.
+    // La interfaz solo envía nombres; PostgreSQL administra los identificadores.
+    public int saveBookWithSelections(BookDetails book, boolean create,
+                                      String newAuthorName, String nationality) throws SQLException {
+        validateBook(book);
+        if (newAuthorName != null) validateAuthor(newAuthorName, nationality);
+        transactions.requireOperationalDatabase();
+        return books.saveWithSelections(book, create, newAuthorName, nationality);
+    }
+
     public void deleteBook(int id) throws SQLException {
         transactions.requireOperationalDatabase();
         books.delete(id);

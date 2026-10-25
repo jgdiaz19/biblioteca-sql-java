@@ -197,6 +197,81 @@ public final class BookDao {
         }
     }
 
+    // Registramos los valores nuevos de los catálogos únicamente al guardar el libro.
+    // Si cualquiera de las operaciones falla, deshacemos todos los cambios.
+    public int saveWithSelections(BookDetails book, boolean create,
+                                  String newAuthorName, String nationality) throws SQLException {
+        if (!connection.getAutoCommit()) {
+            throw new SQLException("Ya existe una transacción activa.");
+        }
+        connection.setAutoCommit(false);
+        try {
+            int authorId = book.authorId();
+            if (newAuthorName != null) {
+                String lookup = "SELECT id_autor FROM autores WHERE LOWER(TRIM(nombre)) = LOWER(?) LIMIT 1";
+                try (PreparedStatement stmt = SqlTrace.prepare(connection, lookup)) {
+                    stmt.setString(1, newAuthorName.trim());
+                    try (ResultSet rs = stmt.executeQuery()) {
+                        if (rs.next()) throw new IllegalArgumentException(
+                                "El autor ya existe. Selecciónelo desde el catálogo.");
+                    }
+                }
+                String sql = "INSERT INTO autores (nombre, nacionalidad) VALUES (?, ?) RETURNING id_autor";
+                try (PreparedStatement stmt = SqlTrace.prepare(connection, sql)) {
+                    stmt.setString(1, newAuthorName.trim());
+                    stmt.setString(2, nationality == null || nationality.isBlank() ? null : nationality.trim());
+                    try (ResultSet rs = stmt.executeQuery()) {
+                        if (!rs.next()) throw new SQLException("No se pudo registrar el nuevo autor.");
+                        authorId = rs.getInt(1);
+                    }
+                }
+            }
+
+            // Resolvemos las categorías y editoriales por nombre, sin duplicarlas.
+            String category = ensureCatalog("categorias", "id_categoria", book.category());
+            String publisher = book.publisher() == null || book.publisher().isBlank()
+                    ? "" : ensureCatalog("editoriales", "id_editorial", book.publisher());
+            BookDetails saved = new BookDetails(book.id(), book.title(), book.isbn(), book.year(),
+                    category, publisher, book.pages(), book.price(), book.available(), authorId);
+            int id;
+            if (create) {
+                id = insert(saved);
+            } else {
+                update(saved);
+                id = saved.id();
+            }
+            connection.commit();
+            return id;
+        } catch (SQLException | RuntimeException error) {
+            try { connection.rollback(); }
+            catch (SQLException rollbackError) { error.addSuppressed(rollbackError); }
+            throw error;
+        } finally {
+            connection.setAutoCommit(true);
+        }
+    }
+
+    // Buscamos primero el valor registrado y solo insertamos uno si no existe.
+    private String ensureCatalog(String table, String key, String value) throws SQLException {
+        String name = value == null ? "" : value.trim().replaceAll("\\s+", " ");
+        if (name.isBlank()) throw new IllegalArgumentException("Capture el nombre del catálogo.");
+        String find = "SELECT nombre FROM " + table + " WHERE LOWER(TRIM(nombre)) = LOWER(?) LIMIT 1";
+        try (PreparedStatement stmt = SqlTrace.prepare(connection, find)) {
+            stmt.setString(1, name);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) return rs.getString(1);
+            }
+        }
+        String insert = "INSERT INTO " + table + " (nombre) VALUES (?) RETURNING nombre";
+        try (PreparedStatement stmt = SqlTrace.prepare(connection, insert)) {
+            stmt.setString(1, name);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (!rs.next()) throw new SQLException("No se pudo registrar: " + name);
+                return rs.getString(1);
+            }
+        }
+    }
+
     public int insert(BookDetails b) throws SQLException {
         String sql = """
                 INSERT INTO libros (titulo, isbn, anio_publicacion, id_categoria,

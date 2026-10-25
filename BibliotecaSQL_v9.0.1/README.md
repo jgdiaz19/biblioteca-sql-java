@@ -1,4 +1,4 @@
-# BibliotecaSQL v9.0
+# BibliotecaSQL v9.0.1
 
 Aplicación didáctica Java 17 + PostgreSQL + JDBC + Lanterna, Universidad Veracruzana.
 
@@ -9,10 +9,17 @@ Aplicación didáctica Java 17 + PostgreSQL + JDBC + Lanterna, Universidad Verac
 - Se eliminaron las columnas de texto duplicadas `categoria` y `editorial` **solo de la base operativa**.
 - La vista `libros_consulta` devuelve sus nombres para consultas y reportes sin duplicarlos.
 - Administración con altas, búsqueda, modificación y bajas de autores, categorías y editoriales desde la opción **2. Administrar catálogos**.
-- El formulario de libros utiliza valores de esos catálogos. Para crear uno nuevo, registre primero el valor desde **2. Administrar catálogos** y regrese al libro.
+- El formulario de libros utiliza valores de esos catálogos. Desde el mismo formulario puede seleccionar **+ Registrar nueva categoría** o **+ Registrar nueva editorial**. Se abre una ventana emergente; el catálogo nuevo se guarda únicamente al confirmar el libro.
 - Un catálogo con libros relacionados no puede eliminarse. Una editorial sigue siendo opcional.
 - `biblioteca_universitaria` conserva el esquema original y sus 24 libros para reproducir A7–A9.
 - Las 21 consultas del laboratorio se ejecutan en `biblioteca_operativa` usando la vista `libros_consulta`; es un esquema de lectura equivalente, no idéntico al esquema original.
+
+## Ajuste v9.0.1
+
+- Ventanas emergentes navegables para elegir o registrar categoría y editorial durante el alta o modificación de libros.
+- `ESC` cancela la selección; un valor nuevo solo se almacena al confirmar el libro.
+- Autor, categoría, editorial y libro nuevos se guardan en una misma transacción. Si falla una parte, se revierte toda la operación.
+- No se modifican las tablas ni se necesita ejecutar una migración adicional desde v9.0.
 
 ## Primera instalación (sin volúmenes previos)
 
