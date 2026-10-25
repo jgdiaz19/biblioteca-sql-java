@@ -9,6 +9,8 @@ import com.googlecode.lanterna.screen.Screen;
 import com.googlecode.lanterna.screen.TerminalScreen;
 import com.googlecode.lanterna.terminal.DefaultTerminalFactory;
 import edu.uv.biblioteca.dao.SqlTrace;
+import edu.uv.biblioteca.dao.CatalogDao;
+import edu.uv.biblioteca.model.CatalogEntry;
 import edu.uv.biblioteca.model.Book;
 import edu.uv.biblioteca.model.BookDetails;
 import edu.uv.biblioteca.model.Author;
@@ -59,7 +61,7 @@ public final class ClassicTui implements AutoCloseable {
 
     public void run() throws IOException {
         splash();
-        String[] main = {"Catálogo de libros", "Catálogo de autores", "Préstamos activos",
+        String[] main = {"Catálogo de libros", "Administrar catálogos", "Préstamos activos",
             "Estadísticas por categoría", "Registrar préstamo", "Registrar devolución",
             "Préstamos vencidos", "Préstamos por usuario", "Laboratorios SQL"};
         while (true) {
@@ -76,7 +78,7 @@ public final class ClassicTui implements AutoCloseable {
                 sqlExplanation = "";
                 switch (selected) {
                     case 1 -> tableBooks();
-                    case 2 -> manageAuthors();
+                    case 2 -> manageCatalogs();
                     case 3 -> manageLoans();
                     case 4 -> tableStats();
                     case 5 -> borrow();
@@ -103,7 +105,7 @@ public final class ClassicTui implements AutoCloseable {
             center(height / 2 - 3, "╚██╗ ██╔╝╚██╗ ██╔╝", YELLOW);
             center(height / 2 - 2, " ╚████╔╝  ╚████╔╝ ", YELLOW);
             center(height / 2 - 1, "  ╚═══╝    ╚═══╝  ", YELLOW);
-            center(height / 2 + 1, "BIBLIOTECASQL  |  v0.8.6", WHITE);
+            center(height / 2 + 1, "BIBLIOTECASQL  |  v9.0", WHITE);
             center(height / 2 + 3, "Ingeniería de Software · Bases de Datos", CYAN);
             center(height / 2 + 5, "Monograma tipográfico, no escudo oficial", GREY);
             screen.refresh();
@@ -372,6 +374,66 @@ public final class ClassicTui implements AutoCloseable {
         }
     }
 
+    // Agrupamos los catálogos para mantener nueve opciones en el menú principal.
+    private void manageCatalogs() throws IOException, SQLException {
+        while (true) {
+            int option = menu("ADMINISTRACIÓN DE CATÁLOGOS",
+                    new String[]{"Autores", "Categorías", "Editoriales"},
+                    "1 Autores  2 Categorías  3 Editoriales  0 Volver");
+            if (option == 0) return;
+            if (option == 1) manageAuthors();
+            if (option == 2) manageControlledCatalog(CatalogDao.Type.CATEGORY);
+            if (option == 3) manageControlledCatalog(CatalogDao.Type.PUBLISHER);
+        }
+    }
+
+    // Mostramos altas, cambios y bajas con una selección por nombre.
+    private void manageControlledCatalog(CatalogDao.Type type) throws IOException, SQLException {
+        String title = type == CatalogDao.Type.CATEGORY ? "CATEGORÍAS" : "EDITORIALES";
+        while (true) {
+            List<CatalogEntry> entries = service.catalog(type);
+            List<String> options = new ArrayList<>();
+            options.add("+ Registrar " + (type == CatalogDao.Type.CATEGORY ? "categoría" : "editorial"));
+            for (CatalogEntry entry : entries) options.add(entry.name());
+            int selected = choose(title, options);
+            if (selected < 0) return;
+            if (selected == 0) {
+                String name = modalInput("AGREGAR " + title, "Nombre", "", 100);
+                if (name == null || !confirm("CONFIRMAR ALTA", "¿Guardar el nuevo valor?")) continue;
+                try {
+                    service.addCatalog(type, name);
+                    message("OPERACIÓN CORRECTA", "Valor registrado correctamente.");
+                } catch (SQLException | IllegalArgumentException ex) {
+                    showFailure("No se pudo registrar el valor", ex);
+                }
+                continue;
+            }
+            CatalogEntry current = entries.get(selected - 1);
+            int action = menu(title + ": " + current.name(),
+                    new String[]{"Consultar datos", "Modificar", "Eliminar"},
+                    "1 Consultar  2 Modificar  3 Eliminar  0 Volver");
+            if (action == 1) message(title, current.name());
+            if (action == 2) {
+                String name = modalInput("MODIFICAR " + title, "Nombre", current.name(), 100);
+                if (name == null || !confirm("CONFIRMAR CAMBIO", "¿Guardar los cambios?")) continue;
+                try {
+                    service.updateCatalog(type, current.id(), name);
+                    message("OPERACIÓN CORRECTA", "Valor actualizado correctamente.");
+                } catch (SQLException | IllegalArgumentException ex) {
+                    showFailure("No se pudo modificar el valor", ex);
+                }
+            }
+            if (action == 3 && confirm("ELIMINAR " + title, "¿Eliminar «" + current.name() + "»?")) {
+                try {
+                    service.deleteCatalog(type, current.id());
+                    message("OPERACIÓN CORRECTA", "Valor eliminado correctamente.");
+                } catch (SQLException | IllegalArgumentException ex) {
+                    showFailure("No se pudo eliminar: puede tener libros asociados", ex);
+                }
+            }
+        }
+    }
+
     // Mostramos el catálogo de autores con el mismo selector que se utiliza en los libros.
     private void manageAuthors() throws IOException, SQLException {
         while (true) {
@@ -440,7 +502,8 @@ public final class ClassicTui implements AutoCloseable {
                                          String current, int maxLength, boolean optional)
             throws IOException {
         List<String> options = new ArrayList<>();
-        options.add("+ Registrar nuevo valor");
+        // Las altas de valores se administran en su catálogo correspondiente.
+        // El formulario de libros solo permite escoger valores ya controlados.
         if (optional) options.add("(Sin editorial)");
         options.addAll(values);
         if (current != null && !current.isBlank()
@@ -449,23 +512,7 @@ public final class ClassicTui implements AutoCloseable {
         }
         int index = choose(title, options);
         if (index < 0) return null;
-        if (index == 0) {
-            String value = modalInput(title, "Nuevo valor", "", maxLength);
-            if (value == null) return null;
-            value = value.trim().replaceAll("\\s+", " ");
-            if (value.isBlank()) {
-                message("VALOR INCORRECTO", "Escriba un nombre para el catálogo.");
-                return null;
-            }
-            for (String existing : values) {
-                if (existing.equalsIgnoreCase(value)) {
-                    message("VALOR EXISTENTE", "Ese valor ya existe. Selecciónelo de la lista.");
-                    return null;
-                }
-            }
-            return value;
-        }
-        if (optional && index == 1) return "";
+        if (optional && index == 0) return "";
         return options.get(index);
     }
 
@@ -539,8 +586,8 @@ public final class ClassicTui implements AutoCloseable {
     private void showFailure(String context, Exception ex) throws IOException {
         String reason = ex.getMessage() == null ? "Error no especificado" : ex.getMessage();
         if (ex instanceof SQLException sql) {
-            if ("23505".equals(sql.getSQLState())) reason = "Ya existe un registro con ese ISBN.";
-            if ("23503".equals(sql.getSQLState())) reason = "El registro tiene relaciones asociadas o el autor no existe.";
+            if ("23505".equals(sql.getSQLState())) reason = "Ya existe un registro con el mismo ISBN o nombre de catálogo.";
+            if ("23503".equals(sql.getSQLState())) reason = "El registro tiene libros o préstamos asociados, o la referencia no existe.";
             if ("23514".equals(sql.getSQLState())) reason = "Algún valor no cumple las reglas de la tabla.";
         }
         message("OPERACIÓN NO COMPLETADA", context + ". " + reason);

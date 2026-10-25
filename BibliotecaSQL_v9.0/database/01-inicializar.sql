@@ -13,3 +13,6 @@ CREATE DATABASE biblioteca_operativa;
 \i /scripts/02-esquema.sql
 \i /scripts/03-datos.sql
 \i /scripts/04-conciliar.sql
+
+-- Normalizamos solo la copia operativa.
+\i /scripts/05-normalizar-catalogos.sql

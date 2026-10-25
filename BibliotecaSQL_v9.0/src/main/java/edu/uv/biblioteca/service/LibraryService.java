@@ -1,6 +1,7 @@
 package edu.uv.biblioteca.service;
 
 import edu.uv.biblioteca.dao.BookDao;
+import edu.uv.biblioteca.dao.CatalogDao;
 import edu.uv.biblioteca.dao.AuthorDao;
 import edu.uv.biblioteca.dao.LabDao;
 import edu.uv.biblioteca.dao.LoanDao;
@@ -13,6 +14,7 @@ import java.util.List;
 // Esta clase comunica los menús con los objetos que acceden a PostgreSQL.
 public final class LibraryService {
     private final BookDao books;
+    private final CatalogDao catalogDao;
     private final AuthorDao authorDao;
     private final LoanDao loans;
     private final ReportDao reports;
@@ -20,12 +22,19 @@ public final class LibraryService {
     private final LoanTransactionService transactions;
     public LibraryService(BookDao books, LoanDao loans, ReportDao reports,
                           LabDao laboratory, LoanTransactionService transactions) {
-        this(books, loans, reports, laboratory, transactions, null);
+        this(books, loans, reports, laboratory, transactions, null, null);
     }
 
     public LibraryService(BookDao books, LoanDao loans, ReportDao reports,
                           LabDao laboratory, LoanTransactionService transactions,
                           AuthorDao authorDao) {
+        this(books, loans, reports, laboratory, transactions, authorDao, null);
+    }
+
+    public LibraryService(BookDao books, LoanDao loans, ReportDao reports,
+                          LabDao laboratory, LoanTransactionService transactions,
+                          AuthorDao authorDao, CatalogDao catalogDao) {
+        this.catalogDao = catalogDao;
         this.authorDao = authorDao;
         // Inicializamos las dependencias que se utilizarán en cada operación.
         this.books = books;
@@ -95,6 +104,34 @@ public final class LibraryService {
 
     private String normalizeOptional(String value) {
         return value == null || value.isBlank() ? null : value.trim();
+    }
+
+    // Validamos los nombres para impedir valores vacíos o duplicados accidentales.
+    private String validateCatalogName(CatalogDao.Type type, String value) {
+        int maximum = type == CatalogDao.Type.CATEGORY ? 80 : 100;
+        if (value == null || value.isBlank()) throw new IllegalArgumentException("Capture un nombre.");
+        String normalized = value.trim().replaceAll("\\s+", " ");
+        if (normalized.length() > maximum) throw new IllegalArgumentException("El nombre excede la longitud permitida.");
+        return normalized;
+    }
+
+    public List<CatalogEntry> catalog(CatalogDao.Type type) throws SQLException {
+        return catalogDao.list(type);
+    }
+
+    public int addCatalog(CatalogDao.Type type, String name) throws SQLException {
+        transactions.requireOperationalDatabase();
+        return catalogDao.insert(type, validateCatalogName(type, name));
+    }
+
+    public void updateCatalog(CatalogDao.Type type, int id, String name) throws SQLException {
+        transactions.requireOperationalDatabase();
+        catalogDao.update(type, id, validateCatalogName(type, name));
+    }
+
+    public void deleteCatalog(CatalogDao.Type type, int id) throws SQLException {
+        transactions.requireOperationalDatabase();
+        catalogDao.delete(type, id);
     }
 
     public List<LibraryUser> activeUsers() throws SQLException { return loans.users(); }

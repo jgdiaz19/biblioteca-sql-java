@@ -16,13 +16,13 @@ import java.util.List;
 public final class BookDao {
     public static final String LIST_SQL = """
             SELECT id_libro, titulo, categoria, disponible
-            FROM libros
+            FROM libros_consulta
             ORDER BY id_libro
             """;
 
     public static final String SEARCH_SQL = """
             SELECT id_libro, titulo, categoria, disponible
-            FROM libros
+            FROM libros_consulta
             WHERE CONCAT_WS(' ', id_libro::text, titulo, categoria) ILIKE ?
             ORDER BY titulo
             """;
@@ -31,7 +31,7 @@ public final class BookDao {
             SELECT categoria,
                    COUNT(*) AS total,
                    COUNT(*) FILTER (WHERE disponible) AS disponibles
-            FROM libros
+            FROM libros_consulta
             GROUP BY categoria
             ORDER BY categoria
             """;
@@ -70,7 +70,7 @@ public final class BookDao {
         String sql = """
                 SELECT id_libro, titulo, isbn, anio_publicacion, categoria,
                        editorial, numero_paginas, precio, disponible, id_autor
-                FROM libros WHERE id_libro = ?
+                FROM libros_consulta WHERE id_libro = ?
                 """;
         try (PreparedStatement stmt = SqlTrace.prepare(connection, sql)) {
             stmt.setInt(1, id);
@@ -85,26 +85,37 @@ public final class BookDao {
         }
     }
 
-    // Formamos las listas de selección con los valores que ya usa la biblioteca.
+    // Recuperamos los valores controlados de sus propias tablas.
     public List<String> categories() throws SQLException {
-        return distinctValues("categoria");
+        return catalogNames("categorias");
     }
 
     public List<String> publishers() throws SQLException {
-        return distinctValues("editorial");
+        return catalogNames("editoriales");
     }
 
-    private List<String> distinctValues(String column) throws SQLException {
-        // El nombre de columna es fijo y no proviene de entradas del usuario.
-        String sql = "SELECT DISTINCT BTRIM(" + column + ") AS valor FROM libros "
-                + "WHERE NULLIF(BTRIM(" + column + "), '') IS NOT NULL "
-                + "ORDER BY valor";
-        List<String> values = new ArrayList<>();
+    private List<String> catalogNames(String table) throws SQLException {
+        String sql = "SELECT nombre FROM " + table + " ORDER BY nombre";
+        List<String> names = new ArrayList<>();
         try (PreparedStatement statement = SqlTrace.prepare(connection, sql);
-             ResultSet rows = statement.executeQuery()) {
-            while (rows.next()) values.add(rows.getString("valor"));
+             ResultSet rs = statement.executeQuery()) {
+            while (rs.next()) names.add(rs.getString(1));
         }
-        return values;
+        return names;
+    }
+
+    // Buscamos la clave foránea en el catálogo correspondiente.
+    private int catalogId(String table, String name, boolean optional) throws SQLException {
+        if (optional && (name == null || name.isBlank())) return 0;
+        String sql = "SELECT id_" + (table.equals("categorias") ? "categoria" : "editorial")
+                + " FROM " + table + " WHERE lower(nombre) = lower(?)";
+        try (PreparedStatement stmt = SqlTrace.prepare(connection, sql)) {
+            stmt.setString(1, name.trim());
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) return rs.getInt(1);
+            }
+        }
+        throw new IllegalArgumentException("Seleccione un valor registrado en el catálogo: " + name);
     }
 
     // Consultamos autores para que no sea necesario memorizar sus identificadores.
@@ -188,8 +199,8 @@ public final class BookDao {
 
     public int insert(BookDetails b) throws SQLException {
         String sql = """
-                INSERT INTO libros (titulo, isbn, anio_publicacion, categoria,
-                    editorial, numero_paginas, precio, disponible, id_autor)
+                INSERT INTO libros (titulo, isbn, anio_publicacion, id_categoria,
+                    id_editorial, numero_paginas, precio, disponible, id_autor)
                 VALUES (?, ?, ?, ?, ?, ?, ?, TRUE, ?) RETURNING id_libro
                 """;
         try (PreparedStatement stmt = SqlTrace.prepare(connection, sql)) {
@@ -205,8 +216,8 @@ public final class BookDao {
         // La disponibilidad se controla desde préstamos; no se edita en el formulario.
         String sql = """
                 UPDATE libros
-                SET titulo = ?, isbn = ?, anio_publicacion = ?, categoria = ?,
-                    editorial = ?, numero_paginas = ?, precio = ?, id_autor = ?
+                SET titulo = ?, isbn = ?, anio_publicacion = ?, id_categoria = ?,
+                    id_editorial = ?, numero_paginas = ?, precio = ?, id_autor = ?
                 WHERE id_libro = ?
                 """;
         try (PreparedStatement stmt = SqlTrace.prepare(connection, sql)) {
@@ -229,8 +240,10 @@ public final class BookDao {
         stmt.setString(1, b.title());
         stmt.setString(2, b.isbn());
         stmt.setInt(3, b.year());
-        stmt.setString(4, b.category());
-        stmt.setString(5, b.publisher());
+        stmt.setInt(4, catalogId("categorias", b.category(), false));
+        int publisherId = catalogId("editoriales", b.publisher(), true);
+        if (publisherId == 0) stmt.setNull(5, java.sql.Types.INTEGER);
+        else stmt.setInt(5, publisherId);
         stmt.setInt(6, b.pages());
         stmt.setBigDecimal(7, b.price());
         stmt.setInt(8, b.authorId());

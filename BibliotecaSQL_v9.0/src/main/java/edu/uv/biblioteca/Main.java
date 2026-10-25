@@ -2,6 +2,7 @@ package edu.uv.biblioteca;
 
 import edu.uv.biblioteca.config.DatabaseConfig;
 import edu.uv.biblioteca.dao.BookDao;
+import edu.uv.biblioteca.dao.CatalogDao;
 import edu.uv.biblioteca.dao.AuthorDao;
 import edu.uv.biblioteca.dao.LabDao;
 import edu.uv.biblioteca.dao.LoanDao;
@@ -24,7 +25,7 @@ public final class Main {
             // Inicializamos los objetos que consultan PostgreSQL y aplican las reglas.
             LibraryService service = new LibraryService(new BookDao(connection), new LoanDao(connection),
                 new ReportDao(connection), new LabDao(connection), new LoanTransactionService(connection),
-                new AuthorDao(connection));
+                new AuthorDao(connection), new CatalogDao(connection));
             try (ClassicTui tui = new ClassicTui(service)) {
                 tui.run();
             }
