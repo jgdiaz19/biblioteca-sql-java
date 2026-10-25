@@ -1,0 +1,19 @@
+services:
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: biblioteca_local
+      POSTGRES_DB: postgres
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - biblioteca_pgdata:/var/lib/postgresql/data
+      - ./database:/scripts:ro
+      - ./database/inicializar.sh:/docker-entrypoint-initdb.d/01-inicializar.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d biblioteca_operativa"]
+      interval: 5s
+      retries: 10
+volumes:
+  biblioteca_pgdata:
