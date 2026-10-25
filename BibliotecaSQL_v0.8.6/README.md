@@ -1,4 +1,4 @@
-# BibliotecaSQL v0.8.5
+# BibliotecaSQL v0.8.6
 
 Aplicación de consola para las prácticas de Bases de Datos de Ingeniería de Software, Universidad Veracruzana.
 
@@ -12,6 +12,15 @@ mvn compile exec:java
 ```
 
 **No es necesario eliminar los volúmenes anteriores si los datos ya están inicializados.**
+
+## Cambios de v0.8.6
+
+- Catálogo independiente de autores: consulta, búsqueda, altas, modificaciones y eliminaciones con confirmación.
+- El menú principal utiliza la opción `2` para autores. El modo didáctico se activa o desactiva con `D` en el menú principal.
+- En el formulario de libros, categoría y editorial se seleccionan de listas obtenidas con `SELECT DISTINCT`.
+- Se pueden incorporar valores nuevos, con comprobación de duplicados por texto sin distinguir mayúsculas.
+- Se conserva la opción «Sin editorial» y no se modifica el esquema SQL empleado en A7–A9.
+- Guía de uso y limitaciones: `docs/17-catalogos-autores-categorias-editoriales.md`.
 
 ## Cambios de v0.8.5
 

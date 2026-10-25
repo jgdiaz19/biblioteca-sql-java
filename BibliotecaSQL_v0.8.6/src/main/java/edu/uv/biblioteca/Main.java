@@ -2,6 +2,7 @@ package edu.uv.biblioteca;
 
 import edu.uv.biblioteca.config.DatabaseConfig;
 import edu.uv.biblioteca.dao.BookDao;
+import edu.uv.biblioteca.dao.AuthorDao;
 import edu.uv.biblioteca.dao.LabDao;
 import edu.uv.biblioteca.dao.LoanDao;
 import edu.uv.biblioteca.dao.ReportDao;
@@ -22,7 +23,8 @@ public final class Main {
         try (Connection connection = DriverManager.getConnection(config.url(), config.user(), config.password())) {
             // Inicializamos los objetos que consultan PostgreSQL y aplican las reglas.
             LibraryService service = new LibraryService(new BookDao(connection), new LoanDao(connection),
-                new ReportDao(connection), new LabDao(connection), new LoanTransactionService(connection));
+                new ReportDao(connection), new LabDao(connection), new LoanTransactionService(connection),
+                new AuthorDao(connection));
             try (ClassicTui tui = new ClassicTui(service)) {
                 tui.run();
             }

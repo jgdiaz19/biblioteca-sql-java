@@ -1,6 +1,7 @@
 package edu.uv.biblioteca.service;
 
 import edu.uv.biblioteca.dao.BookDao;
+import edu.uv.biblioteca.dao.AuthorDao;
 import edu.uv.biblioteca.dao.LabDao;
 import edu.uv.biblioteca.dao.LoanDao;
 import edu.uv.biblioteca.dao.ReportDao;
@@ -12,12 +13,20 @@ import java.util.List;
 // Esta clase comunica los menús con los objetos que acceden a PostgreSQL.
 public final class LibraryService {
     private final BookDao books;
+    private final AuthorDao authorDao;
     private final LoanDao loans;
     private final ReportDao reports;
     private final LabDao laboratory;
     private final LoanTransactionService transactions;
     public LibraryService(BookDao books, LoanDao loans, ReportDao reports,
                           LabDao laboratory, LoanTransactionService transactions) {
+        this(books, loans, reports, laboratory, transactions, null);
+    }
+
+    public LibraryService(BookDao books, LoanDao loans, ReportDao reports,
+                          LabDao laboratory, LoanTransactionService transactions,
+                          AuthorDao authorDao) {
+        this.authorDao = authorDao;
         // Inicializamos las dependencias que se utilizarán en cada operación.
         this.books = books;
         this.loans = loans;
@@ -61,6 +70,33 @@ public final class LibraryService {
 
     public BookDetails bookDetails(int id) throws SQLException { return books.details(id); }
     public List<Author> authors() throws SQLException { return books.authors(); }
+
+    public List<AuthorDetails> authorCatalog() throws SQLException { return authorDao.list(); }
+    public List<String> categories() throws SQLException { return books.categories(); }
+    public List<String> publishers() throws SQLException { return books.publishers(); }
+
+    public int addAuthor(String name, String nationality) throws SQLException {
+        validateAuthor(name, nationality);
+        transactions.requireOperationalDatabase();
+        return authorDao.insert(name.trim(), normalizeOptional(nationality));
+    }
+
+    public void updateAuthor(AuthorDetails author) throws SQLException {
+        validateAuthor(author.name(), author.nationality());
+        transactions.requireOperationalDatabase();
+        authorDao.update(new AuthorDetails(author.id(), author.name().trim(),
+                normalizeOptional(author.nationality())));
+    }
+
+    public void deleteAuthor(int id) throws SQLException {
+        transactions.requireOperationalDatabase();
+        authorDao.delete(id);
+    }
+
+    private String normalizeOptional(String value) {
+        return value == null || value.isBlank() ? null : value.trim();
+    }
+
     public List<LibraryUser> activeUsers() throws SQLException { return loans.users(); }
 
     public int addBook(BookDetails b) throws SQLException {

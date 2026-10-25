@@ -12,6 +12,7 @@ import edu.uv.biblioteca.dao.SqlTrace;
 import edu.uv.biblioteca.model.Book;
 import edu.uv.biblioteca.model.BookDetails;
 import edu.uv.biblioteca.model.Author;
+import edu.uv.biblioteca.model.AuthorDetails;
 import edu.uv.biblioteca.model.LibraryUser;
 import edu.uv.biblioteca.model.Loan;
 import java.math.BigDecimal;
@@ -58,25 +59,31 @@ public final class ClassicTui implements AutoCloseable {
 
     public void run() throws IOException {
         splash();
-        String[] main = {"Catálogo de libros", "Préstamos activos", "Estadísticas por categoría",
-            "Registrar préstamo", "Registrar devolución", "Préstamos vencidos",
-            "Préstamos por usuario", "Laboratorios SQL", "Modo didáctico"};
+        String[] main = {"Catálogo de libros", "Catálogo de autores", "Préstamos activos",
+            "Estadísticas por categoría", "Registrar préstamo", "Registrar devolución",
+            "Préstamos vencidos", "Préstamos por usuario", "Laboratorios SQL"};
         while (true) {
-            int selected = menu("MENÚ PRINCIPAL", main, "0 Salir   1-9 Elegir   ↑↓ Mover   ENTER Abrir");
+            int selected = menu("MENÚ PRINCIPAL", main,
+                    "0 Salir   1-9 Elegir   D Modo didáctico   ↑↓ Mover");
             if (selected == 0) return;
+            if (selected == -2) {
+                teaching = !teaching;
+                notice = "Modo didáctico: " + (teaching ? "activado" : "desactivado");
+                continue;
+            }
             try {
                 SqlTrace.clear();
                 sqlExplanation = "";
                 switch (selected) {
                     case 1 -> tableBooks();
-                    case 2 -> manageLoans();
-                    case 3 -> tableStats();
-                    case 4 -> borrow();
-                    case 5 -> giveBack();
-                    case 6 -> tableOverdue();
-                    case 7 -> tableUsers();
-                    case 8 -> laboratory();
-                    case 9 -> { teaching = !teaching; notice = "Modo didáctico: " + (teaching ? "activado" : "desactivado"); }
+                    case 2 -> manageAuthors();
+                    case 3 -> manageLoans();
+                    case 4 -> tableStats();
+                    case 5 -> borrow();
+                    case 6 -> giveBack();
+                    case 7 -> tableOverdue();
+                    case 8 -> tableUsers();
+                    case 9 -> laboratory();
                     default -> { }
                 }
             } catch (SQLException ex) {
@@ -96,7 +103,7 @@ public final class ClassicTui implements AutoCloseable {
             center(height / 2 - 3, "╚██╗ ██╔╝╚██╗ ██╔╝", YELLOW);
             center(height / 2 - 2, " ╚████╔╝  ╚████╔╝ ", YELLOW);
             center(height / 2 - 1, "  ╚═══╝    ╚═══╝  ", YELLOW);
-            center(height / 2 + 1, "BIBLIOTECASQL  |  v0.8.4", WHITE);
+            center(height / 2 + 1, "BIBLIOTECASQL  |  v0.8.6", WHITE);
             center(height / 2 + 3, "Ingeniería de Software · Bases de Datos", CYAN);
             center(height / 2 + 5, "Monograma tipográfico, no escudo oficial", GREY);
             screen.refresh();
@@ -126,6 +133,7 @@ public final class ClassicTui implements AutoCloseable {
             if (key.getKeyType() == KeyType.Character) {
                 char c = key.getCharacter();
                 if (c == '0') return 0;
+                if ((c == 'd' || c == 'D') && title.equals("MENÚ PRINCIPAL")) return -2;
                 if (c >= '1' && c <= '9' && c - '1' < options.length) return c - '0';
             }
         }
@@ -364,6 +372,103 @@ public final class ClassicTui implements AutoCloseable {
         }
     }
 
+    // Mostramos el catálogo de autores con el mismo selector que se utiliza en los libros.
+    private void manageAuthors() throws IOException, SQLException {
+        while (true) {
+            List<AuthorDetails> authors = service.authorCatalog();
+            List<String> options = new ArrayList<>();
+            options.add("+ Agregar autor");
+            for (AuthorDetails author : authors) {
+                options.add(author.name() + "  |  "
+                        + (author.nationality() == null ? "Sin nacionalidad" : author.nationality()));
+            }
+
+            int selected = choose("CATÁLOGO DE AUTORES", options);
+            if (selected < 0) return;
+            if (selected == 0) {
+                editAuthor(null);
+                continue;
+            }
+
+            AuthorDetails author = authors.get(selected - 1);
+            int operation = menu("AUTOR: " + author.name(),
+                    new String[]{"Consultar datos", "Modificar autor", "Eliminar autor"},
+                    "1 Consultar   2 Modificar   3 Eliminar   0 Volver");
+            if (operation == 1) {
+                message("DETALLE DEL AUTOR", "Nombre: " + author.name()
+                        + " | Nacionalidad: " + (author.nationality() == null
+                        ? "Sin especificar" : author.nationality()));
+            } else if (operation == 2) {
+                editAuthor(author);
+            } else if (operation == 3) {
+                if (!confirm("ELIMINAR AUTOR", "¿Eliminar a «" + author.name() + "»?")) continue;
+                try {
+                    service.deleteAuthor(author.id());
+                    message("OPERACIÓN CORRECTA", "El autor se eliminó correctamente.");
+                } catch (SQLException | IllegalArgumentException ex) {
+                    showFailure("No se pudo eliminar el autor", ex);
+                }
+            }
+        }
+    }
+
+    // Pedimos los datos del autor en ventanas emergentes y validamos antes de guardarlos.
+    private void editAuthor(AuthorDetails previous) throws IOException {
+        boolean create = previous == null;
+        String title = create ? "AGREGAR AUTOR" : "MODIFICAR AUTOR";
+        String name = modalInput(title, "Nombre completo", create ? "" : previous.name(), 120);
+        if (name == null) return;
+        String nationality = modalInput(title, "Nacionalidad (opcional)",
+                create ? "" : previous.nationality(), 60);
+        if (nationality == null) return;
+        if (!confirm(title, "¿Guardar los datos de «" + name.trim() + "»?")) return;
+        try {
+            if (create) {
+                service.addAuthor(name, nationality);
+                message("OPERACIÓN CORRECTA", "El autor se registró correctamente.");
+            } else {
+                service.updateAuthor(new AuthorDetails(previous.id(), name, nationality));
+                message("OPERACIÓN CORRECTA", "El autor se actualizó correctamente.");
+            }
+        } catch (SQLException | IllegalArgumentException ex) {
+            showFailure("No se pudo guardar el autor", ex);
+        }
+    }
+
+    // Elegimos una categoría o editorial de la lista para evitar variantes accidentales.
+    private String chooseControlledValue(String title, List<String> values,
+                                         String current, int maxLength, boolean optional)
+            throws IOException {
+        List<String> options = new ArrayList<>();
+        options.add("+ Registrar nuevo valor");
+        if (optional) options.add("(Sin editorial)");
+        options.addAll(values);
+        if (current != null && !current.isBlank()
+                && values.stream().noneMatch(x -> x.equalsIgnoreCase(current.trim()))) {
+            options.add(current.trim());
+        }
+        int index = choose(title, options);
+        if (index < 0) return null;
+        if (index == 0) {
+            String value = modalInput(title, "Nuevo valor", "", maxLength);
+            if (value == null) return null;
+            value = value.trim().replaceAll("\\s+", " ");
+            if (value.isBlank()) {
+                message("VALOR INCORRECTO", "Escriba un nombre para el catálogo.");
+                return null;
+            }
+            for (String existing : values) {
+                if (existing.equalsIgnoreCase(value)) {
+                    message("VALOR EXISTENTE", "Ese valor ya existe. Selecciónelo de la lista.");
+                    return null;
+                }
+            }
+            return value;
+        }
+        if (optional && index == 1) return "";
+        return options.get(index);
+    }
+
     // Permitimos elegir un autor registrado o capturar los datos de uno nuevo.
     private void editBook(BookDetails previous) throws IOException, SQLException {
         boolean create = previous == null;
@@ -393,9 +498,11 @@ public final class ClassicTui implements AutoCloseable {
         if (isbn == null) return;
         String year = modalInput(title, "Año de publicación", create ? "2026" : String.valueOf(previous.year()), 4);
         if (year == null) return;
-        String category = modalInput(title, "Categoría", create ? "" : previous.category(), 80);
+        String category = chooseControlledValue("CATEGORÍA DEL LIBRO", service.categories(),
+                create ? null : previous.category(), 80, false);
         if (category == null) return;
-        String publisher = modalInput(title, "Editorial", create ? "" : previous.publisher(), 100);
+        String publisher = chooseControlledValue("EDITORIAL DEL LIBRO", service.publishers(),
+                create ? null : previous.publisher(), 100, true);
         if (publisher == null) return;
         String pages = modalInput(title, "Número de páginas", create ? "100" : String.valueOf(previous.pages()), 8);
         if (pages == null) return;

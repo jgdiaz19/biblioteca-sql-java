@@ -85,6 +85,28 @@ public final class BookDao {
         }
     }
 
+    // Formamos las listas de selección con los valores que ya usa la biblioteca.
+    public List<String> categories() throws SQLException {
+        return distinctValues("categoria");
+    }
+
+    public List<String> publishers() throws SQLException {
+        return distinctValues("editorial");
+    }
+
+    private List<String> distinctValues(String column) throws SQLException {
+        // El nombre de columna es fijo y no proviene de entradas del usuario.
+        String sql = "SELECT DISTINCT BTRIM(" + column + ") AS valor FROM libros "
+                + "WHERE NULLIF(BTRIM(" + column + "), '') IS NOT NULL "
+                + "ORDER BY valor";
+        List<String> values = new ArrayList<>();
+        try (PreparedStatement statement = SqlTrace.prepare(connection, sql);
+             ResultSet rows = statement.executeQuery()) {
+            while (rows.next()) values.add(rows.getString("valor"));
+        }
+        return values;
+    }
+
     // Consultamos autores para que no sea necesario memorizar sus identificadores.
     public List<Author> authors() throws SQLException {
         List<Author> result = new ArrayList<>();
