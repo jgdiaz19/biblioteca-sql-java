@@ -12,7 +12,7 @@ import java.util.List;
 // Consultamos los préstamos que todavía no tienen una fecha de devolución real.
 public final class LoanDao {
     public static final String ACTIVE_SQL = """
-            SELECT p.id_prestamo, l.titulo, u.nombre, p.fecha_devolucion
+            SELECT p.id_prestamo, l.titulo, u.nombre, p.fecha_prestamo, p.fecha_devolucion
             FROM prestamos p
             JOIN libros l ON l.id_libro = p.id_libro
             JOIN usuarios u ON u.id_usuario = p.id_usuario
@@ -29,9 +29,26 @@ public final class LoanDao {
         try (PreparedStatement statement = SqlTrace.prepare(connection, ACTIVE_SQL);
              ResultSet rs = statement.executeQuery()) {
             while (rs.next()) loans.add(new Loan(rs.getInt("id_prestamo"),rs.getString("titulo"),
-                    rs.getString("nombre"),rs.getDate("fecha_devolucion").toLocalDate()));
+                    rs.getString("nombre"),rs.getDate("fecha_prestamo").toLocalDate(),
+                    rs.getDate("fecha_devolucion").toLocalDate()));
         }
         return loans;
+    }
+    // Damos de alta un usuario para que pueda solicitar libros inmediatamente.
+    public int createUser(String name, String type, String career) throws SQLException {
+        String sql = """
+                INSERT INTO usuarios (nombre, tipo_usuario, carrera, activo)
+                VALUES (?, ?, ?, TRUE) RETURNING id_usuario
+                """;
+        try (PreparedStatement statement = SqlTrace.prepare(connection, sql)) {
+            statement.setString(1, name);
+            statement.setString(2, type);
+            statement.setString(3, career.isBlank() ? null : career);
+            try (ResultSet result = statement.executeQuery()) {
+                result.next();
+                return result.getInt(1);
+            }
+        }
     }
     // Consultamos únicamente los usuarios habilitados para solicitar libros.
     public List<LibraryUser> users() throws SQLException {

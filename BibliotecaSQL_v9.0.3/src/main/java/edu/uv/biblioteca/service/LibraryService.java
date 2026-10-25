@@ -44,6 +44,28 @@ public final class LibraryService {
         this.transactions = transactions;
     }
     public int borrow(int userId, int bookId) throws SQLException { return transactions.borrow(userId, bookId); }
+    public int borrow(int userId, int bookId, int days) throws SQLException {
+        return transactions.borrow(userId, bookId, days);
+    }
+    public int borrowWithNewUser(String name, String type, String career, int bookId, int days)
+            throws SQLException {
+        if (name == null || name.isBlank() || type == null || type.isBlank())
+            throw new IllegalArgumentException("El nombre y el tipo de usuario son obligatorios.");
+        return transactions.borrowNewUser(name, type, career, bookId, days);
+    }
+    // Validamos datos antes de crear el usuario y utilizarlo en un préstamo.
+    public int addBorrower(String name, String type, String career) throws SQLException {
+        if (name == null || name.isBlank() || name.length() > 120)
+            throw new IllegalArgumentException("Capture el nombre del usuario (máximo 120 caracteres).");
+        if (type == null || type.isBlank() || type.length() > 30)
+            throw new IllegalArgumentException("Capture el tipo de usuario (máximo 30 caracteres).");
+        if (career == null || career.length() > 100)
+            throw new IllegalArgumentException("La carrera admite hasta 100 caracteres.");
+        transactions.requireOperationalDatabase();
+        return loans.createUser(name.trim(), type.trim(), career.trim());
+    }
+    public List<LoanHistory> loanHistory(int userId) throws SQLException { return reports.history(userId); }
+    public List<CategoryBook> categoryBooks(String category) throws SQLException { return books.categoryBooks(category); }
     public void returnBook(int loanId) throws SQLException { transactions.returnBook(loanId); }
     public List<Book> listBooks() throws SQLException { return books.list(); }
     public List<Book> searchBooks(String term) throws SQLException {

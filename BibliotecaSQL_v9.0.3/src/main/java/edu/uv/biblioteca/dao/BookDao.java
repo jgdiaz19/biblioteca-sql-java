@@ -5,6 +5,7 @@ import edu.uv.biblioteca.model.BookDetails;
 import edu.uv.biblioteca.model.Author;
 import java.math.BigDecimal;
 import edu.uv.biblioteca.model.CategoryStat;
+import edu.uv.biblioteca.model.CategoryBook;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -322,5 +323,27 @@ public final class BookDao {
         stmt.setInt(6, b.pages());
         stmt.setBigDecimal(7, b.price());
         stmt.setInt(8, b.authorId());
+    }
+    // Mostramos todos los ejemplares de una categoría y quién tiene los prestados.
+    public List<CategoryBook> categoryBooks(String category) throws SQLException {
+        String sql = """
+                SELECT l.id_libro, l.titulo, l.disponible, u.nombre AS prestatario
+                FROM libros_consulta l
+                LEFT JOIN prestamos p ON p.id_libro = l.id_libro
+                    AND p.fecha_devolucion_real IS NULL
+                LEFT JOIN usuarios u ON u.id_usuario = p.id_usuario
+                WHERE l.categoria = ?
+                ORDER BY l.titulo, l.id_libro
+                """;
+        List<CategoryBook> books = new ArrayList<>();
+        try (PreparedStatement stmt = SqlTrace.prepare(connection, sql)) {
+            stmt.setString(1, category);
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) books.add(new CategoryBook(rs.getInt("id_libro"),
+                        rs.getString("titulo"), rs.getBoolean("disponible"),
+                        rs.getString("prestatario")));
+            }
+        }
+        return books;
     }
 }

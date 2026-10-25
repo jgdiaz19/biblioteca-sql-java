@@ -19,6 +19,10 @@ import edu.uv.biblioteca.model.LibraryUser;
 import edu.uv.biblioteca.model.Loan;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
+import edu.uv.biblioteca.model.LoanHistory;
+import edu.uv.biblioteca.model.CategoryBook;
 import edu.uv.biblioteca.model.LabResult;
 import edu.uv.biblioteca.service.LibraryService;
 import java.io.IOException;
@@ -30,6 +34,18 @@ import java.util.Locale;
 // Dibujamos los menús y las tablas como en los programas de consola clásicos.
 // La interfaz procesa teclas y muestra resultados; las reglas de negocio viven en servicios.
 public final class ClassicTui implements AutoCloseable {
+    // Usamos el mismo formato de fecha en todas las pantallas y formularios.
+    private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("dd-MM-uuuu")
+            .withResolverStyle(java.time.format.ResolverStyle.STRICT);
+
+    private static String date(LocalDate value) {
+        return value == null ? "—" : value.format(DATE_FORMAT);
+    }
+
+    private static LocalDate parseDate(String value) {
+        return LocalDate.parse(value, DATE_FORMAT);
+    }
+
     private static final TextColor BLUE = new TextColor.RGB(0, 0, 170);
     private static final TextColor WHITE = new TextColor.RGB(244, 244, 244);
     private static final TextColor YELLOW = new TextColor.RGB(255, 255, 110);
@@ -252,26 +268,62 @@ public final class ClassicTui implements AutoCloseable {
         }
     }
 
+    // La fecha de préstamo y la fecha límite se muestran en columnas distintas.
     private void tableLoans() throws IOException, SQLException {
-        var loans = service.activeLoans();
-        List<List<String>> rows = new ArrayList<>();
-        loans.forEach(x -> rows.add(List.of(String.valueOf(x.id()), x.user(), x.title(), String.valueOf(x.dueDate()))));
-        table("PRÉSTAMOS ACTIVOS", List.of("ID", "USUARIO", "LIBRO", "LÍMITE"), rows);
+        manageLoans();
     }
+
+    // ENTER abre los ejemplares de la categoría e identifica quién tiene cada libro.
     private void tableStats() throws IOException, SQLException {
-        List<List<String>> rows = new ArrayList<>();
-        service.statistics().forEach(x -> rows.add(List.of(x.category(), String.valueOf(x.total()), String.valueOf(x.available()))));
-        table("ESTADÍSTICAS", List.of("CATEGORÍA", "TOTAL", "DISPONIBLES"), rows);
+        while (true) {
+            var stats = service.statistics();
+            List<List<String>> rows = new ArrayList<>();
+            stats.forEach(x -> rows.add(List.of(x.category(), String.valueOf(x.total()),
+                    String.valueOf(x.available()), String.valueOf(x.total() - x.available()))));
+            TableAction selection = catalogTable("ESTADÍSTICAS POR CATEGORÍA",
+                    List.of("CATEGORÍA", "TOTAL", "DISPONIBLES", "PRESTADOS"), rows,
+                    "ENTER Detalle  0 Volver", false);
+            if (selection.action() == 0) return;
+            if (selection.action() != 1 || selection.index() < 0) continue;
+            String category = stats.get(selection.index()).category();
+            List<List<String>> details = new ArrayList<>();
+            for (CategoryBook book : service.categoryBooks(category)) {
+                details.add(List.of(book.title(), book.available() ? "Disponible" : "Prestado",
+                        book.borrower() == null ? (book.available() ? "Biblioteca" : "Sin usuario activo")
+                                : book.borrower()));
+            }
+            table("DETALLE: " + category, List.of("LIBRO", "ESTADO", "UBICACIÓN / USUARIO"), details);
+        }
     }
+
     private void tableOverdue() throws IOException, SQLException {
         List<List<String>> rows = new ArrayList<>();
-        service.overdue().forEach(x -> rows.add(List.of(String.valueOf(x.id()), x.user(), x.title(), String.valueOf(x.dueDate()), String.valueOf(x.daysLate()))));
-        table("PRÉSTAMOS VENCIDOS", List.of("ID", "USUARIO", "LIBRO", "FECHA", "DÍAS"), rows);
+        service.overdue().forEach(x -> rows.add(List.of(x.user(), x.title(), date(x.loanDate()),
+                date(x.dueDate()), String.valueOf(x.daysLate()))));
+        table("PRÉSTAMOS VENCIDOS", List.of("USUARIO", "LIBRO", "PRÉSTAMO", "VENCIMIENTO", "DÍAS"), rows);
     }
+
+    // ENTER muestra tanto los préstamos activos como los que ya fueron devueltos.
     private void tableUsers() throws IOException, SQLException {
-        List<List<String>> rows = new ArrayList<>();
-        service.userCounts().forEach(x -> rows.add(List.of(x.user(), String.valueOf(x.activeLoans()))));
-        table("PRÉSTAMOS POR USUARIO", List.of("USUARIO", "ACTIVOS"), rows);
+        while (true) {
+            var counts = service.userCounts();
+            List<List<String>> rows = new ArrayList<>();
+            counts.forEach(x -> rows.add(List.of(x.user(), String.valueOf(x.totalLoans()),
+                    String.valueOf(x.activeLoans()), String.valueOf(x.returnedLoans()))));
+            TableAction selection = catalogTable("PRÉSTAMOS POR USUARIO",
+                    List.of("USUARIO", "TOTAL", "ACTIVOS", "DEVUELTOS"), rows,
+                    "ENTER Historial  0 Volver", false);
+            if (selection.action() == 0) return;
+            if (selection.action() != 1 || selection.index() < 0) continue;
+            var user = counts.get(selection.index());
+            List<List<String>> history = new ArrayList<>();
+            for (LoanHistory entry : service.loanHistory(user.userId())) {
+                history.add(List.of(entry.title(), date(entry.loanDate()), date(entry.dueDate()),
+                        date(entry.returnedDate()), entry.returnedDate() == null ? "Activo" : "Devuelto"));
+            }
+            table("HISTORIAL: " + user.user(),
+                    List.of("LIBRO", "PRÉSTAMO", "LÍMITE", "DEVOLUCIÓN", "ESTADO"), history);
+        }
     }
 
     private void laboratory() throws IOException, SQLException {
@@ -294,37 +346,82 @@ public final class ClassicTui implements AutoCloseable {
         }
     }
 
-    // Elegimos usuarios y libros desde listas; los identificadores se toman internamente.
+    // Seleccionamos un usuario existente o lo registramos desde este mismo flujo.
     private void borrow() throws IOException, SQLException {
         List<LibraryUser> users = service.activeUsers();
-        int userChoice = choose("SELECCIONE USUARIO", users.stream()
-                .map(u -> u.name()).toList());
+        List<String> options = new ArrayList<>();
+        options.add("+ Registrar nuevo usuario");
+        users.forEach(u -> options.add(u.name()));
+        int userChoice = choose("USUARIO DEL PRÉSTAMO", options);
         if (userChoice < 0) return;
+        Integer userId = userChoice == 0 ? null : users.get(userChoice - 1).id();
+        String userName = userChoice == 0 ? "Nuevo usuario" : users.get(userChoice - 1).name();
+        String name = null;
+        String type = null;
+        String career = null;
+        if (userId == null) {
+            name = modalInput("NUEVO USUARIO", "Nombre completo", "", 120);
+            if (name == null) return;
+            type = modalInput("NUEVO USUARIO", "Tipo de usuario (Alumno/Docente/Otro)", "Alumno", 30);
+            if (type == null) return;
+            career = modalInput("NUEVO USUARIO", "Carrera (opcional)", "", 100);
+            if (career == null) return;
+            userName = name.trim();
+        }
+
         List<Book> available = service.listBooks().stream().filter(Book::available).toList();
+        if (available.isEmpty()) {
+            message("SIN DISPONIBILIDAD", "No hay libros disponibles para préstamo.");
+            return;
+        }
         int bookChoice = choose("SELECCIONE LIBRO DISPONIBLE", available.stream()
                 .map(Book::title).toList());
         if (bookChoice < 0) return;
         Book book = available.get(bookChoice);
-        if (!confirm("CONFIRMAR PRÉSTAMO", "¿Prestar «" + book.title() + "»?")) return;
+        String period = modalInput("PLAZO DEL PRÉSTAMO", "Días (1 a 365)", "14", 3);
+        if (period == null) return;
+        int days;
         try {
-            int loanId = service.borrow(users.get(userChoice).id(), book.id());
-            message("OPERACIÓN CORRECTA", "Préstamo registrado correctamente. Referencia: " + loanId);
+            days = Integer.parseInt(period.trim());
+            if (days < 1 || days > 365) throw new NumberFormatException();
+        } catch (NumberFormatException ex) {
+            message("PLAZO INCORRECTO", "Capture un plazo entre 1 y 365 días.");
+            return;
+        }
+        String summary = userName + " | " + book.title() + " | " + days + " días";
+        if (!confirm("CONFIRMAR PRÉSTAMO", summary)) return;
+        try {
+            // Al crear un usuario, guardamos el usuario y el préstamo de forma atómica.
+            int loanId = userId == null
+                    ? service.borrowWithNewUser(name, type, career, book.id(), days)
+                    : service.borrow(userId, book.id(), days);
+            message("OPERACIÓN CORRECTA", "Préstamo " + loanId + " registrado. Límite: "
+                    + date(LocalDate.now().plusDays(days)));
         } catch (SQLException | IllegalArgumentException ex) {
             showFailure("No se pudo registrar el préstamo", ex);
         }
     }
 
+    // Seleccionamos el préstamo desde una tabla, sin capturar identificadores.
     private void giveBack() throws IOException, SQLException {
-        List<Loan> loans = service.activeLoans();
-        int choice = choose("SELECCIONE PRÉSTAMO A DEVOLVER", loans.stream()
-                .map(l -> l.title() + " · " + l.user()).toList());
-        if (choice < 0) return;
-        if (!confirm("CONFIRMAR DEVOLUCIÓN", "¿Registrar la devolución del libro seleccionado?")) return;
-        try {
-            service.returnBook(loans.get(choice).id());
-            message("OPERACIÓN CORRECTA", "La devolución se registró correctamente.");
-        } catch (SQLException | IllegalArgumentException ex) {
-            showFailure("No se pudo registrar la devolución", ex);
+        while (true) {
+            List<Loan> loans = service.activeLoans();
+            List<List<String>> rows = new ArrayList<>();
+            loans.forEach(x -> rows.add(List.of(x.user(), x.title(), date(x.loanDate()), date(x.dueDate()))));
+            TableAction selection = catalogTable("REGISTRAR DEVOLUCIÓN",
+                    List.of("USUARIO", "LIBRO", "PRÉSTAMO", "FECHA LÍMITE"), rows,
+                    "ENTER Devolver  0 Volver", false);
+            if (selection.action() == 0) return;
+            if (selection.action() != 1 || selection.index() < 0) continue;
+            Loan loan = loans.get(selection.index());
+            if (!confirm("CONFIRMAR DEVOLUCIÓN", "¿Devolver «" + loan.title() + "» de " + loan.user() + "?"))
+                continue;
+            try {
+                service.returnBook(loan.id());
+                message("OPERACIÓN CORRECTA", "Devolución registrada el " + date(LocalDate.now()));
+            } catch (SQLException | IllegalArgumentException ex) {
+                showFailure("No se pudo registrar la devolución", ex);
+            }
         }
     }
 
@@ -335,10 +432,10 @@ public final class ClassicTui implements AutoCloseable {
             List<List<String>> rows = new ArrayList<>();
             for (Loan loan : loans) {
                 rows.add(List.of(String.valueOf(loan.id()), loan.user(),
-                        loan.title(), loan.dueDate().toString()));
+                        loan.title(), date(loan.loanDate()), date(loan.dueDate())));
             }
             TableAction choice = catalogTable("PRÉSTAMOS ACTIVOS",
-                    List.of("ID", "USUARIO", "LIBRO", "FECHA LÍMITE"), rows,
+                    List.of("ID", "USUARIO", "LIBRO", "PRÉSTAMO", "LÍMITE"), rows,
                     "4 Nuevo  5 Cambiar fecha  6 Devolver  7 Cancelar  0 Volver", true);
             if (choice.action() == 0) return;
             if (choice.action() == 4) { borrow(); continue; }
@@ -346,16 +443,16 @@ public final class ClassicTui implements AutoCloseable {
             Loan loan = loans.get(choice.index());
             if (choice.action() == 1) {
                 message("DETALLE DEL PRÉSTAMO", loan.user() + " | " + loan.title()
-                        + " | Fecha límite: " + loan.dueDate());
+                        + " | Préstamo: " + date(loan.loanDate()) + " | Límite: " + date(loan.dueDate()));
             } else if (choice.action() == 5) {
-                String value = modalInput("MODIFICAR PLAZO", "Fecha límite AAAA-MM-DD",
-                        loan.dueDate().toString(), 10);
+                String value = modalInput("MODIFICAR PLAZO", "Fecha límite DD-MM-AAAA",
+                        date(loan.dueDate()), 10);
                 if (value == null) continue;
                 try {
-                    service.changeDueDate(loan.id(), LocalDate.parse(value));
+                    service.changeDueDate(loan.id(), parseDate(value));
                     message("OPERACIÓN CORRECTA", "La fecha límite se actualizó correctamente.");
                 } catch (java.time.format.DateTimeParseException ex) {
-                    message("DATO INCORRECTO", "Utilice el formato AAAA-MM-DD.");
+                    message("DATO INCORRECTO", "Utilice el formato DD-MM-AAAA.");
                 } catch (SQLException | IllegalArgumentException ex) {
                     showFailure("No se pudo modificar el préstamo", ex);
                 }

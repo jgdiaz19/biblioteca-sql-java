@@ -21,8 +21,46 @@ public final class LoanTransactionService {
 
     /** Registra un préstamo atómico y devuelve su identificador. */
     public int borrow(int userId, int bookId) throws SQLException {
+        return borrow(userId, bookId, LOAN_DAYS);
+    }
+
+    // El plazo se captura antes de abrir la transacción y se valida en el servicio.
+    public int borrow(int userId, int bookId, int days) throws SQLException {
         if (userId <= 0 || bookId <= 0) throw new IllegalArgumentException("Los identificadores deben ser positivos.");
+        if (days < 1 || days > 365)
+            throw new IllegalArgumentException("El plazo debe ser de 1 a 365 días.");
+        return transaction(() -> borrowWithinTransaction(userId, bookId, days));
+    }
+
+    // Creamos el usuario y registramos el préstamo en una misma transacción.
+    // Si el préstamo falla, tampoco se conserva el nuevo usuario.
+    public int borrowNewUser(String name, String type, String career, int bookId, int days)
+            throws SQLException {
+        if (name == null || name.isBlank() || name.length() > 120 ||
+                type == null || type.isBlank() || type.length() > 30 ||
+                career == null || career.length() > 100)
+            throw new IllegalArgumentException("Revise los datos del nuevo usuario.");
+        if (days < 1 || days > 365) throw new IllegalArgumentException("El plazo debe ser de 1 a 365 días.");
         return transaction(() -> {
+            int userId;
+            try (PreparedStatement stmt = SqlTrace.prepare(connection, """
+                    INSERT INTO usuarios (nombre, tipo_usuario, carrera, activo)
+                    VALUES (?, ?, ?, TRUE) RETURNING id_usuario
+                    """)) {
+                stmt.setString(1, name.trim());
+                stmt.setString(2, type.trim());
+                stmt.setString(3, career.isBlank() ? null : career.trim());
+                try (ResultSet rs = stmt.executeQuery()) {
+                    rs.next();
+                    userId = rs.getInt(1);
+                }
+            }
+            return borrowWithinTransaction(userId, bookId, days);
+        });
+    }
+
+    // Validamos al usuario y al libro antes de modificar las dos tablas.
+    private int borrowWithinTransaction(int userId, int bookId, int days) throws SQLException {
             // Primero bloqueamos usuario, después libro: orden de bloqueo consistente.
             try (PreparedStatement s = SqlTrace.prepare(connection, 
                     "SELECT activo FROM usuarios WHERE id_usuario = ? FOR UPDATE")) {
@@ -65,7 +103,7 @@ public final class LoanTransactionService {
                 s.setInt(1, bookId);
                 s.setInt(2, userId);
                 s.setDate(3, Date.valueOf(start));
-                s.setDate(4, Date.valueOf(start.plusDays(LOAN_DAYS)));
+                s.setDate(4, Date.valueOf(start.plusDays(days)));
                 try (ResultSet r = s.executeQuery()) { r.next(); loanId = r.getInt(1); }
             }
             try (PreparedStatement s = SqlTrace.prepare(connection, 
@@ -74,8 +112,8 @@ public final class LoanTransactionService {
                 if (s.executeUpdate() != 1) throw new SQLException("No se actualizó la disponibilidad del libro.");
             }
             return loanId;
-        });
     }
+
 
     /** Registra una devolución únicamente si el préstamo sigue abierto. */
     public void returnBook(int loanId) throws SQLException {
