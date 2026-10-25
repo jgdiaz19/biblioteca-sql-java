@@ -1,4 +1,4 @@
-# BibliotecaSQL — v0.2
+# BibliotecaSQL — v0.3
 
 Proyecto didáctico Java 17, JDBC y PostgreSQL para la EE Bases de Datos. La interfaz recuerda las aplicaciones de consola tradicionales: menús numéricos, tablas alineadas, encabezados y limpieza ANSI cuando la terminal es compatible.
 
@@ -42,9 +42,38 @@ La base inicial contiene 12 autores, 24 libros, 10 usuarios y 18 préstamos. No 
 2. Buscar título con `PreparedStatement`.
 3. Listar préstamos activos mediante `JOIN`.
 4. Agrupar libros por categoría y disponibilidad mediante `GROUP BY`.
-5. Activar o desactivar la vista didáctica del SQL y parámetros.
+5. Registrar préstamo mediante transacción JDBC.
+6. Registrar devolución mediante transacción JDBC.
+7. Activar o desactivar el modo didáctico SQL.
 
-**Esta versión solo consulta información.** Préstamos, devoluciones y CRUD se implementarán después, con reglas de negocio y transacciones comprobadas.
+**Esta versión permite modificar exclusivamente `biblioteca_operativa`.** El servicio transaccional verifica el nombre de la base y rechaza escrituras si es distinto; `biblioteca_universitaria` sigue reservada para las consultas de A7–A9.
+
+## Reglas implementadas en v0.3
+
+- RB-01: usuario existente y activo.
+- RB-02: no más de tres préstamos activos por usuario.
+- RB-03: libro existente, disponible y sin otro préstamo activo.
+- RB-04: plazo de catorce días a partir de la fecha del sistema.
+- RB-05: una devolución no puede registrarse dos veces ni anteceder al préstamo.
+- RB-06: inserción del préstamo y actualización del libro forman una sola transacción; devolución y liberación del libro también.
+- RB-07: `SELECT ... FOR UPDATE` protege filas involucradas y el índice parcial `uq_prestamo_activo_libro` impide préstamos activos simultáneos de un mismo libro.
+
+La base operativa inicia con préstamos históricos abiertos de 2026. Para ensayar una operación nueva, consulte primero la opción 1 y seleccione un libro disponible y un usuario activo con menos de tres préstamos abiertos. Se utilizan las fechas locales del equipo Java; no se permite devolver un préstamo fechado en el futuro.
+
+## Secuencia de comprobación manual
+
+1. Consulte el catálogo y anote un identificador de libro disponible.
+2. Registre un préstamo para un usuario activo elegible y conserve el ID generado.
+3. Compruebe que el libro pasó a no disponible y que el préstamo aparece en el listado de activos.
+4. Intente prestar de nuevo el mismo libro; debe rechazarse.
+5. Registre la devolución con el ID del préstamo.
+6. Compruebe que el libro vuelve a disponible y que el préstamo ya no figura entre los activos.
+7. Intente devolver el mismo préstamo otra vez; debe rechazarse.
+8. Consulte la base académica por separado para confirmar que sus registros no cambiaron.
+
+Para evitar perder datos, Docker conserva un volumen nombrado. Si ya existe un volumen de v0.2, no es necesario reinicializarlo cuando contiene la tabla `prestamos` y el índice de unicidad activo. Si se eliminan los volúmenes, se pierde el trabajo previo.
+
+**Limitación de validación:** la compilación y pruebas básicas Java fueron revisadas, pero no se completó una ejecución integral real con PostgreSQL en este entorno. Se requiere validarla localmente antes de emplearla en una práctica evaluada.
 
 ## Organización
 

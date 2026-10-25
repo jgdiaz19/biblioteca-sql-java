@@ -13,12 +13,23 @@ public final class MenuController {
     public MenuController(ConsoleView view, LibraryService service) {
         this.view=view; this.service=service;
     }
+    private Integer positiveId(String label) {
+        String input = view.ask(label);
+        if (input == null) return null;
+        try {
+            int id = Integer.parseInt(input);
+            if (id <= 0) throw new NumberFormatException();
+            return id;
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("Introduzca un identificador entero positivo.");
+        }
+    }
     public void run() {
         while (true) {
             view.menu(teaching);
             String choice = view.ask("\nSeleccione una opción: ");
             if (choice == null || "0".equals(choice)) break;
-            if ("5".equals(choice)) { teaching = !teaching; continue; }
+            if ("7".equals(choice)) { teaching = !teaching; continue; }
             view.clear();
             try {
                 switch (choice) {
@@ -37,6 +48,21 @@ public final class MenuController {
                     case "4" -> { view.heading("ESTADÍSTICAS POR CATEGORÍA");
                         if (teaching) view.sql(BookDao.STATS_SQL, null);
                         view.statistics(service.statistics()); }
+                    case "5" -> { view.heading("REGISTRAR PRÉSTAMO");
+                        view.message("Regla: máximo 3 préstamos activos por usuario; plazo de 14 días.");
+                        Integer userId = positiveId("ID del usuario: ");
+                        if (userId == null) return;
+                        Integer bookId = positiveId("ID del libro: ");
+                        if (bookId == null) return;
+                        int loanId = service.borrow(userId, bookId);
+                        view.message("Préstamo registrado correctamente. ID: " + loanId);
+                        if (teaching) view.message("JDBC: BEGIN, SELECT ... FOR UPDATE, INSERT ... RETURNING, UPDATE, COMMIT."); }
+                    case "6" -> { view.heading("REGISTRAR DEVOLUCIÓN");
+                        Integer loanId = positiveId("ID del préstamo: ");
+                        if (loanId == null) return;
+                        service.returnBook(loanId);
+                        view.message("Devolución registrada. El libro vuelve a estar disponible.");
+                        if (teaching) view.message("JDBC: BEGIN, SELECT ... FOR UPDATE, UPDATE préstamos, UPDATE libros, COMMIT."); }
                     default -> view.message("Opción no válida. Seleccione un número del menú.");
                 }
             } catch (SQLException e) {

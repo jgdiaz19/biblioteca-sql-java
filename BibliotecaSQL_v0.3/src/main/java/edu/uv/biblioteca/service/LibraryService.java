@@ -10,9 +10,14 @@ import java.util.List;
 
 /** Capa de servicios: punto único para validaciones y futuras reglas de negocio. */
 public final class LibraryService {
+    private final LoanTransactionService transactions;
     private final BookDao books;
     private final LoanDao loans;
-    public LibraryService(BookDao books, LoanDao loans) { this.books = books; this.loans = loans; }
+    public LibraryService(BookDao books, LoanDao loans, LoanTransactionService transactions) {
+        this.books = books; this.loans = loans; this.transactions = transactions;
+    }
+    public int borrow(int userId, int bookId) throws SQLException { return transactions.borrow(userId, bookId); }
+    public void returnBook(int loanId) throws SQLException { transactions.returnBook(loanId); }
     public List<Book> listBooks() throws SQLException { return books.list(); }
     public List<Book> searchBooks(String term) throws SQLException {
         if (term == null || term.isBlank()) throw new IllegalArgumentException("Escriba un título para buscar.");

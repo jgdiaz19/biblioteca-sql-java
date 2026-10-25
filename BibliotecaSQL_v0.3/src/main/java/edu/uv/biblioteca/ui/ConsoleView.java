@@ -32,12 +32,14 @@ public final class ConsoleView implements AutoCloseable {
     }
     public void menu(boolean teaching) {
         clear();
-        heading("BIBLIOTECASQL · V0.2 · POSTGRESQL");
+        heading("BIBLIOTECASQL · V0.3 · POSTGRESQL");
         out.println("  1. Catálogo de libros");
         out.println("  2. Buscar libros por título");
         out.println("  3. Préstamos activos");
         out.println("  4. Estadísticas por categoría");
-        out.println("  5. Cambiar modo didáctico SQL: " + (teaching ? "ACTIVO" : "INACTIVO"));
+        out.println("  5. Registrar préstamo");
+        out.println("  6. Registrar devolución");
+        out.println("  7. Cambiar modo didáctico SQL: " + (teaching ? "ACTIVO" : "INACTIVO"));
         out.println("  0. Salir");
     }
     public String ask(String label) {

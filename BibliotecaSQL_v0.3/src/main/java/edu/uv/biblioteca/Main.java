@@ -4,6 +4,7 @@ import edu.uv.biblioteca.config.DatabaseConfig;
 import edu.uv.biblioteca.dao.BookDao;
 import edu.uv.biblioteca.dao.LoanDao;
 import edu.uv.biblioteca.service.LibraryService;
+import edu.uv.biblioteca.service.LoanTransactionService;
 import edu.uv.biblioteca.ui.ConsoleView;
 import edu.uv.biblioteca.ui.MenuController;
 import java.sql.Connection;
@@ -17,7 +18,7 @@ public final class Main {
         DatabaseConfig config = DatabaseConfig.fromEnvironment();
         try (Connection connection = DriverManager.getConnection(config.url(), config.user(), config.password());
              ConsoleView view = new ConsoleView(System.in, System.out)) {
-            LibraryService service = new LibraryService(new BookDao(connection), new LoanDao(connection));
+            LibraryService service = new LibraryService(new BookDao(connection), new LoanDao(connection), new LoanTransactionService(connection));
             new MenuController(view, service).run();
         } catch (SQLException e) {
             System.err.println("No se pudo conectar con PostgreSQL. SQLState=" + e.getSQLState());
