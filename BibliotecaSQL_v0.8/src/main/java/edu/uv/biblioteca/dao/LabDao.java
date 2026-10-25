@@ -5,6 +5,7 @@ import java.sql.*;
 import java.util.*;
 
 // Reunimos las consultas del segundo parcial para ejecutarlas sin modificar datos.
+// Cada ejemplo conserva el SQL, el tema y una explicación para el laboratorio.
 public final class LabDao {
     private record Example(int activity, String title, String sql, String explanation) { }
     private static final List<Example> EXAMPLES = List.of(
@@ -140,7 +141,7 @@ public final class LabDao {
         List<String> columns = new ArrayList<>();
         List<List<String>> rows = new ArrayList<>();
         // Ejecutamos consultas predefinidas de solo lectura contra PostgreSQL.
-        try (PreparedStatement statement = connection.prepareStatement(example.sql());
+        try (PreparedStatement statement = SqlTrace.prepare(connection, example.sql());
              ResultSet result = statement.executeQuery()) {
             ResultSetMetaData metadata = result.getMetaData();
             for (int i = 1; i <= metadata.getColumnCount(); i++) columns.add(metadata.getColumnLabel(i));

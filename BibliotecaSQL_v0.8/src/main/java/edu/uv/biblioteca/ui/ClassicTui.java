@@ -8,6 +8,7 @@ import com.googlecode.lanterna.input.KeyType;
 import com.googlecode.lanterna.screen.Screen;
 import com.googlecode.lanterna.screen.TerminalScreen;
 import com.googlecode.lanterna.terminal.DefaultTerminalFactory;
+import edu.uv.biblioteca.dao.SqlTrace;
 import edu.uv.biblioteca.model.Book;
 import edu.uv.biblioteca.model.LabResult;
 import edu.uv.biblioteca.service.LibraryService;
@@ -18,6 +19,7 @@ import java.util.List;
 import java.util.Locale;
 
 // Dibujamos los menús y las tablas como en los programas de consola clásicos.
+// La interfaz procesa teclas y muestra resultados; las reglas de negocio viven en servicios.
 public final class ClassicTui implements AutoCloseable {
     private static final TextColor BLUE = new TextColor.RGB(0, 0, 170);
     private static final TextColor WHITE = new TextColor.RGB(244, 244, 244);
@@ -30,6 +32,7 @@ public final class ClassicTui implements AutoCloseable {
     private final TextGraphics graphics;
     private String notice = "";
     private boolean teaching;
+    private String sqlExplanation = "";
     private int width;
     private int height;
 
@@ -51,6 +54,8 @@ public final class ClassicTui implements AutoCloseable {
             int selected = menu("MENÚ PRINCIPAL", main, "0 Salir   1-9 Elegir   ↑↓ Mover   ENTER Abrir");
             if (selected == 0) return;
             try {
+                SqlTrace.clear();
+                sqlExplanation = "";
                 switch (selected) {
                     case 1 -> tableBooks();
                     case 2 -> tableLoans();
@@ -80,7 +85,7 @@ public final class ClassicTui implements AutoCloseable {
             center(height / 2 - 3, "╚██╗ ██╔╝╚██╗ ██╔╝", YELLOW);
             center(height / 2 - 2, " ╚████╔╝  ╚████╔╝ ", YELLOW);
             center(height / 2 - 1, "  ╚═══╝    ╚═══╝  ", YELLOW);
-            center(height / 2 + 1, "BIBLIOTECASQL  |  v0.7", WHITE);
+            center(height / 2 + 1, "BIBLIOTECASQL  |  v0.8", WHITE);
             center(height / 2 + 3, "Ingeniería de Software · Bases de Datos", CYAN);
             center(height / 2 + 5, "Monograma tipográfico, no escudo oficial", GREY);
             screen.refresh();
@@ -116,7 +121,7 @@ public final class ClassicTui implements AutoCloseable {
     }
 
     private void tableBooks() throws IOException, SQLException {
-        // Conservamos una copia para filtrar sin volver a consultar PostgreSQL.
+        // Cargamos el catálogo una sola vez para habilitar el filtrado en Java.
         List<Book> complete = service.listBooks();
         List<Book> filtered = complete;
         String search = "";
@@ -126,7 +131,9 @@ public final class ClassicTui implements AutoCloseable {
         int offset = 0;
         String error = "";
         while (true) {
-            frame("CATÁLOGO DE LIBROS", "1 Buscar   2 Java/SQL   ↑↓ Seleccionar   PgUp/PgDn   ENTER Detalle   0 Volver");
+            frame("CATÁLOGO DE LIBROS", teaching
+                ? "1 Buscar   2 Java/SQL   3 Ver SQL   ↑↓ Mover   0 Volver"
+                : "1 Buscar   2 Java/SQL   ↑↓ Mover   ENTER Detalle   0 Volver");
             line(3, 3, "Filtro: " + (searching ? "[" + search + "_]" : search.isEmpty() ? "(sin filtro)" : search), YELLOW);
             line(3, 4, "Modo: " + (sqlMode ? "PostgreSQL (ILIKE)" : "Java (memoria)") +
                 "     Coincidencias: " + filtered.size() + "/" + complete.size(), CYAN);
@@ -159,7 +166,16 @@ public final class ClassicTui implements AutoCloseable {
                 else continue;
             } else if (ch == '0') return;
             else if (ch == '1' || ch == '/') { searching = true; continue; }
-            else if (ch == '2') sqlMode = !sqlMode;
+            else if (ch == '2') {
+                sqlMode = !sqlMode;
+                // Regresamos al catálogo completo para aplicar el modo elegido.
+                filtered = complete;
+                search = "";
+                selected = 0;
+                offset = 0;
+                continue;
+            }
+            else if (ch == '3' && teaching) { sqlWindow("BÚSQUEDA DE LIBROS"); continue; }
             else if (type == KeyType.ArrowUp) { selected = Math.max(0, selected - 1); continue; }
             else if (type == KeyType.ArrowDown) { selected = Math.min(filtered.size() - 1, selected + 1); continue; }
             else if (type == KeyType.PageUp) { selected = Math.max(0, selected - visible); continue; }
@@ -221,8 +237,9 @@ public final class ClassicTui implements AutoCloseable {
                 LabResult result = service.labRun(a, choice);
                 List<List<String>> rows = new ArrayList<>();
                 rows.addAll(result.rows());
+                sqlExplanation = result.explanation();
                 table("A" + a + " · " + result.title(), result.columns(), rows);
-                if (teaching) message("SQL · " + result.title(), result.sql() + "  |  " + result.explanation());
+
             }
         }
     }
@@ -256,7 +273,8 @@ public final class ClassicTui implements AutoCloseable {
         int offset = 0;
         while (true) {
             List<List<String>> filtered = filterRows(rows, search);
-            frame(title, "1 o / Buscar   ↑↓ Desplazar   PgUp/PgDn   0 Volver");
+            frame(title, teaching ? "1 / Buscar   3 Ver SQL   ↑↓ Desplazar   0 Volver"
+                : "1 / Buscar   ↑↓ Desplazar   0 Volver");
             line(3, 3, "Buscar: " + (editing ? "[" + search + "_]" : search.isEmpty() ? "(todos)" : search)
                 + "    Coincidencias: " + filtered.size() + "/" + rows.size(), CYAN);
             int colWidth = Math.max(8, (width - 8) / Math.max(1, columns.size()));
@@ -287,6 +305,7 @@ public final class ClassicTui implements AutoCloseable {
                 offset = 0;
             } else if (ch == '0') return;
             else if (ch == '1' || ch == '/') { editing = true; continue; }
+            else if (ch == '3' && teaching) { sqlWindow(title); continue; }
             else if (type == KeyType.ArrowDown) offset = Math.min(Math.max(0, filtered.size() - page), offset + 1);
             else if (type == KeyType.ArrowUp) offset = Math.max(0, offset - 1);
             else if (type == KeyType.PageDown) offset = Math.min(Math.max(0, filtered.size() - page), offset + page);
@@ -320,14 +339,98 @@ public final class ClassicTui implements AutoCloseable {
 
     private void message(String title, String message) throws IOException {
         while (true) {
-            frame(title, "ENTER o ESC para regresar");
+            frame(title, teaching ? "ENTER / ESC Volver   3 Ver SQL" : "ENTER / ESC Volver");
             int max = Math.max(12, width - 10);
             for (int i = 0; i < message.length(); i += max)
                 line(5, Math.max(4, height / 2 - 2) + i / max, message.substring(i, Math.min(message.length(), i + max)), WHITE);
             screen.refresh();
             KeyStroke key = nextKey();
-            if (key != null) return;
+            if (key != null && key.getKeyType() == KeyType.Character
+                    && key.getCharacter() == '3' && teaching) {
+                sqlWindow(title);
+            } else if (key != null) {
+                return;
+            }
         }
+    }
+
+    /** Abre una ventana para estudiar las sentencias que ejecutó JDBC. */
+    private void sqlWindow(String title) throws IOException {
+        List<SqlTrace.Entry> entries = SqlTrace.snapshot();
+        if (entries.isEmpty()) {
+            return;
+        }
+
+        int current = entries.size() - 1;
+        int scroll = 0;
+        boolean explanation = false;
+
+        while (true) {
+            frame("MODO DIDÁCTICO · " + title,
+                "←→ Sentencia   ↑↓ Desplazar   2 Explicación   0 / ESC Cerrar");
+            SqlTrace.Entry entry = entries.get(current);
+
+            // Ajustamos el código al ancho de la terminal conservando la sangría.
+            List<String> lines = new ArrayList<>();
+            if (explanation && !sqlExplanation.isBlank()) {
+                lines.add("EXPLICACIÓN");
+                lines.addAll(wrap(sqlExplanation, Math.max(15, width - 11)));
+                lines.add("");
+            }
+            lines.add("SQL ejecutado:");
+            for (String sqlLine : entry.sql().split("\\R")) {
+                lines.addAll(wrap(sqlLine, Math.max(15, width - 11)));
+            }
+            lines.add("");
+            lines.add("PARÁMETROS JDBC:");
+            if (entry.parameters().isEmpty()) {
+                lines.add("Sin parámetros");
+            } else {
+                lines.addAll(entry.parameters());
+            }
+
+            line(4, 3, "Sentencia " + (current + 1) + " de " + entries.size(), YELLOW);
+            // Dibujamos una ventana interior para separar el código de la pantalla principal.
+            horizontal(3, 4, width - 6);
+            horizontal(3, height - 4, width - 6);
+            for (int y = 5; y < height - 4; y++) {
+                line(3, y, "│", WHITE);
+                line(width - 4, y, "│", WHITE);
+            }
+            int capacity = Math.max(1, height - 10);
+            scroll = Math.min(scroll, Math.max(0, lines.size() - capacity));
+            for (int i = 0; i < capacity && i + scroll < lines.size(); i++) {
+                line(5, 5 + i, lines.get(i + scroll),
+                    lines.get(i + scroll).startsWith("SQL ejecutado")
+                        || lines.get(i + scroll).startsWith("PARÁMETROS") ? YELLOW : WHITE);
+            }
+            screen.refresh();
+            KeyStroke key = nextKey();
+            if (key == null) continue;
+            KeyType type = key.getKeyType();
+            char ch = type == KeyType.Character ? key.getCharacter() : '\0';
+            if (type == KeyType.Escape || ch == '0') return;
+            if (type == KeyType.ArrowUp) scroll = Math.max(0, scroll - 1);
+            if (type == KeyType.ArrowDown) scroll = Math.min(Math.max(0, lines.size() - capacity), scroll + 1);
+            if (type == KeyType.PageUp) scroll = Math.max(0, scroll - capacity);
+            if (type == KeyType.PageDown) scroll = Math.min(Math.max(0, lines.size() - capacity), scroll + capacity);
+            if (type == KeyType.ArrowLeft) { current = Math.max(0, current - 1); scroll = 0; }
+            if (type == KeyType.ArrowRight) { current = Math.min(entries.size() - 1, current + 1); scroll = 0; }
+            if (ch == '2') { explanation = !explanation; scroll = 0; }
+        }
+    }
+
+    // Dividimos las líneas largas para que puedan leerse en pantallas pequeñas.
+    private static List<String> wrap(String value, int length) {
+        List<String> result = new ArrayList<>();
+        if (value.isEmpty()) {
+            result.add("");
+            return result;
+        }
+        for (int i = 0; i < value.length(); i += length) {
+            result.add(value.substring(i, Math.min(value.length(), i + length)));
+        }
+        return result;
     }
 
     private void frame(String title, String help) throws IOException {
@@ -362,6 +465,10 @@ public final class ClassicTui implements AutoCloseable {
         graphics.fillRectangle(new com.googlecode.lanterna.TerminalPosition(0, height - 1), new TerminalSize(width, 1), ' ');
         line(1, height - 1, help, BLACK);
         graphics.setBackgroundColor(BLUE);
+        // Mostramos el estado para que sea evidente cuándo se puede consultar el SQL.
+        if (teaching && height >= 5) {
+            line(Math.max(2, width - 22), 1, "DIDÁCTICO ACTIVO", CYAN);
+        }
     }
 
     private void horizontal(int x, int y, int length) {

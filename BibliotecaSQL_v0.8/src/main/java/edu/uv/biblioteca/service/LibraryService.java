@@ -9,6 +9,7 @@ import java.sql.SQLException;
 import java.util.List;
 
 // Reunimos las operaciones que pueden solicitarse desde la interfaz.
+// Esta clase comunica los menús con los objetos que acceden a PostgreSQL.
 public final class LibraryService {
     private final BookDao books;
     private final LoanDao loans;

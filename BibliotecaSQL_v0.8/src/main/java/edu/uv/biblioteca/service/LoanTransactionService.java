@@ -1,5 +1,6 @@
 package edu.uv.biblioteca.service;
 
+import edu.uv.biblioteca.dao.SqlTrace;
 import java.sql.Connection;
 import java.sql.Date;
 import java.sql.PreparedStatement;
@@ -23,7 +24,7 @@ public final class LoanTransactionService {
         if (userId <= 0 || bookId <= 0) throw new IllegalArgumentException("Los identificadores deben ser positivos.");
         return transaction(() -> {
             // Primero bloqueamos usuario, después libro: orden de bloqueo consistente.
-            try (PreparedStatement s = connection.prepareStatement(
+            try (PreparedStatement s = SqlTrace.prepare(connection, 
                     "SELECT activo FROM usuarios WHERE id_usuario = ? FOR UPDATE")) {
                 s.setInt(1, userId);
                 try (ResultSet r = s.executeQuery()) {
@@ -31,7 +32,7 @@ public final class LoanTransactionService {
                     if (!r.getBoolean(1)) throw new IllegalArgumentException("El usuario se encuentra inactivo.");
                 }
             }
-            try (PreparedStatement s = connection.prepareStatement(
+            try (PreparedStatement s = SqlTrace.prepare(connection, 
                     "SELECT COUNT(*) FROM prestamos WHERE id_usuario = ? AND fecha_devolucion_real IS NULL")) {
                 s.setInt(1, userId);
                 try (ResultSet r = s.executeQuery()) {
@@ -40,7 +41,7 @@ public final class LoanTransactionService {
                             "El usuario ya tiene " + MAX_ACTIVE + " préstamos activos.");
                 }
             }
-            try (PreparedStatement s = connection.prepareStatement(
+            try (PreparedStatement s = SqlTrace.prepare(connection, 
                     "SELECT disponible FROM libros WHERE id_libro = ? FOR UPDATE")) {
                 s.setInt(1, bookId);
                 try (ResultSet r = s.executeQuery()) {
@@ -49,7 +50,7 @@ public final class LoanTransactionService {
                 }
             }
             // La restricción parcial UNIQUE de PostgreSQL es la última defensa.
-            try (PreparedStatement s = connection.prepareStatement(
+            try (PreparedStatement s = SqlTrace.prepare(connection, 
                     "SELECT 1 FROM prestamos WHERE id_libro = ? AND fecha_devolucion_real IS NULL")) {
                 s.setInt(1, bookId);
                 try (ResultSet r = s.executeQuery()) {
@@ -58,7 +59,7 @@ public final class LoanTransactionService {
             }
             LocalDate start = LocalDate.now();
             int loanId;
-            try (PreparedStatement s = connection.prepareStatement(
+            try (PreparedStatement s = SqlTrace.prepare(connection, 
                     "INSERT INTO prestamos (id_libro, id_usuario, fecha_prestamo, fecha_devolucion) " +
                     "VALUES (?, ?, ?, ?) RETURNING id_prestamo")) {
                 s.setInt(1, bookId);
@@ -67,7 +68,7 @@ public final class LoanTransactionService {
                 s.setDate(4, Date.valueOf(start.plusDays(LOAN_DAYS)));
                 try (ResultSet r = s.executeQuery()) { r.next(); loanId = r.getInt(1); }
             }
-            try (PreparedStatement s = connection.prepareStatement(
+            try (PreparedStatement s = SqlTrace.prepare(connection, 
                     "UPDATE libros SET disponible = FALSE WHERE id_libro = ?")) {
                 s.setInt(1, bookId);
                 if (s.executeUpdate() != 1) throw new SQLException("No se actualizó la disponibilidad del libro.");
@@ -83,7 +84,7 @@ public final class LoanTransactionService {
             // Bloqueamos primero el préstamo, después su libro.
             int bookId;
             LocalDate start;
-            try (PreparedStatement s = connection.prepareStatement(
+            try (PreparedStatement s = SqlTrace.prepare(connection, 
                     "SELECT id_libro, fecha_prestamo, fecha_devolucion_real FROM prestamos " +
                     "WHERE id_prestamo = ? FOR UPDATE")) {
                 s.setInt(1, loanId);
@@ -97,21 +98,21 @@ public final class LoanTransactionService {
             }
             if (LocalDate.now().isBefore(start))
                 throw new IllegalArgumentException("No es posible devolver un préstamo con fecha futura.");
-            try (PreparedStatement s = connection.prepareStatement(
+            try (PreparedStatement s = SqlTrace.prepare(connection, 
                     "SELECT id_libro FROM libros WHERE id_libro = ? FOR UPDATE")) {
                 s.setInt(1, bookId);
                 try (ResultSet r = s.executeQuery()) {
                     if (!r.next()) throw new SQLException("Libro asociado no encontrado.");
                 }
             }
-            try (PreparedStatement s = connection.prepareStatement(
+            try (PreparedStatement s = SqlTrace.prepare(connection, 
                     "UPDATE prestamos SET fecha_devolucion_real = ? " +
                     "WHERE id_prestamo = ? AND fecha_devolucion_real IS NULL")) {
                 s.setDate(1, Date.valueOf(LocalDate.now()));
                 s.setInt(2, loanId);
                 if (s.executeUpdate() != 1) throw new SQLException("No se pudo completar la devolución.");
             }
-            try (PreparedStatement s = connection.prepareStatement(
+            try (PreparedStatement s = SqlTrace.prepare(connection, 
                     "UPDATE libros SET disponible = TRUE WHERE id_libro = ?")) {
                 s.setInt(1, bookId);
                 if (s.executeUpdate() != 1) throw new SQLException("No se actualizó el libro.");
@@ -124,7 +125,7 @@ public final class LoanTransactionService {
 
     private <T> T transaction(Work<T> work) throws SQLException {
         if (!connection.getAutoCommit()) throw new SQLException("Se requiere una conexión sin transacción previa.");
-        try (PreparedStatement s = connection.prepareStatement("SELECT current_database()");
+        try (PreparedStatement s = SqlTrace.prepare(connection, "SELECT current_database()");
              ResultSet r = s.executeQuery()) {
             r.next();
             if (!"biblioteca_operativa".equals(r.getString(1)))

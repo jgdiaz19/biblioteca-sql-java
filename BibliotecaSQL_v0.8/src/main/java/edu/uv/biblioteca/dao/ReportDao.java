@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 // Reunimos las consultas necesarias para los reportes de préstamos.
+// Separamos los reportes del código de la interfaz para poder reutilizarlos.
 public final class ReportDao {
     public static final String OVERDUE_SQL = """
         SELECT p.id_prestamo, l.titulo, u.nombre, p.fecha_devolucion,
@@ -35,7 +36,7 @@ public final class ReportDao {
     // Consultamos únicamente los préstamos abiertos cuya fecha límite ya pasó.
     public List<OverdueLoan> overdue() throws SQLException {
         List<OverdueLoan> rows = new ArrayList<>();
-        try (PreparedStatement statement = connection.prepareStatement(OVERDUE_SQL);
+        try (PreparedStatement statement = SqlTrace.prepare(connection, OVERDUE_SQL);
              ResultSet result = statement.executeQuery()) {
             while (result.next()) {
                 rows.add(new OverdueLoan(result.getInt("id_prestamo"), result.getString("titulo"),
@@ -49,7 +50,7 @@ public final class ReportDao {
     // Usamos LEFT JOIN para incluir también a quienes no tienen préstamos activos.
     public List<UserLoanStat> userCounts() throws SQLException {
         List<UserLoanStat> rows = new ArrayList<>();
-        try (PreparedStatement statement = connection.prepareStatement(USER_COUNTS_SQL);
+        try (PreparedStatement statement = SqlTrace.prepare(connection, USER_COUNTS_SQL);
              ResultSet result = statement.executeQuery()) {
             while (result.next()) {
                 rows.add(new UserLoanStat(result.getInt("id_usuario"), result.getString("nombre"),
