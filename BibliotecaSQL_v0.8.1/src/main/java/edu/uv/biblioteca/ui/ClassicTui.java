@@ -26,6 +26,11 @@ public final class ClassicTui implements AutoCloseable {
     private static final TextColor YELLOW = new TextColor.RGB(255, 255, 110);
     private static final TextColor CYAN = new TextColor.RGB(115, 235, 235);
     private static final TextColor GREY = new TextColor.RGB(204, 204, 204);
+    private static final TextColor SQL_KEYWORD = new TextColor.RGB(255, 235, 105);
+    private static final TextColor SQL_FUNCTION = new TextColor.RGB(124, 236, 236);
+    private static final TextColor SQL_STRING = new TextColor.RGB(159, 255, 165);
+    private static final TextColor SQL_NUMBER = new TextColor.RGB(255, 188, 135);
+    private static final TextColor SQL_COMMENT = new TextColor.RGB(183, 189, 199);
     private static final TextColor BLACK = new TextColor.RGB(5, 5, 55);
     private final Screen screen;
     private final LibraryService service;
@@ -367,30 +372,32 @@ public final class ClassicTui implements AutoCloseable {
 
         while (true) {
             frame("MODO DIDÁCTICO · " + title,
-                "←→ Sentencia   ↑↓ Desplazar   2 Explicación   0 / ESC Cerrar");
+                "←→ Sentencia   ↑↓ Desplazar   2 SQL/Explicación   0 Cerrar");
             SqlTrace.Entry entry = entries.get(current);
 
-            // Ajustamos el código al ancho de la terminal conservando la sangría.
+            // Presentamos el SQL o su explicación en vistas separadas.
             List<String> lines = new ArrayList<>();
-            if (explanation && !sqlExplanation.isBlank()) {
-                lines.add("EXPLICACIÓN");
-                lines.addAll(wrap(sqlExplanation, Math.max(15, width - 11)));
+            if (explanation) {
+                String content = sqlExplanation.isBlank()
+                    ? SqlExplanation.describe(entry.sql()) : sqlExplanation;
+                lines.add("EXPLICACIÓN DE LA CONSULTA");
+                for (String paragraph : content.split("\\R", -1)) {
+                    lines.addAll(wrap(paragraph, Math.max(15, width - 11)));
+                }
                 lines.add("");
-            }
-            lines.add("SQL ejecutado:");
-            for (String sqlLine : entry.sql().split("\\R")) {
-                lines.addAll(wrap(sqlLine, Math.max(15, width - 11)));
-            }
-            lines.add("");
-            lines.add("PARÁMETROS JDBC:");
-            if (entry.parameters().isEmpty()) {
-                lines.add("Sin parámetros");
+                lines.add("Pulse 2 para volver al código SQL.");
             } else {
-                lines.addAll(entry.parameters());
+                lines.add("SQL EJECUTADO:");
+                for (String sqlLine : entry.sql().split("\\R", -1)) {
+                    lines.addAll(wrap(sqlLine, Math.max(15, width - 11)));
+                }
+                lines.add("");
+                lines.add("PARÁMETROS JDBC:");
+                if (entry.parameters().isEmpty()) lines.add("Sin parámetros");
+                else lines.addAll(entry.parameters());
             }
-
-            line(4, 3, "Sentencia " + (current + 1) + " de " + entries.size(), YELLOW);
-            // Dibujamos una ventana interior para separar el código de la pantalla principal.
+            line(4, 3, "Sentencia " + (current + 1) + " de " + entries.size()
+                + (explanation ? "  |  EXPLICACIÓN" : "  |  CÓDIGO SQL"), YELLOW);
             horizontal(3, 4, width - 6);
             horizontal(3, height - 4, width - 6);
             for (int y = 5; y < height - 4; y++) {
@@ -399,10 +406,18 @@ public final class ClassicTui implements AutoCloseable {
             }
             int capacity = Math.max(1, height - 10);
             scroll = Math.min(scroll, Math.max(0, lines.size() - capacity));
+            // Coloreamos únicamente las líneas de SQL; no los textos de ayuda.
+            boolean sqlSection = false;
             for (int i = 0; i < capacity && i + scroll < lines.size(); i++) {
-                line(5, 5 + i, lines.get(i + scroll),
-                    lines.get(i + scroll).startsWith("SQL ejecutado")
-                        || lines.get(i + scroll).startsWith("PARÁMETROS") ? YELLOW : WHITE);
+                String row = lines.get(i + scroll);
+                if (row.equals("SQL EJECUTADO:")) sqlSection = true;
+                else if (row.equals("PARÁMETROS JDBC:")) sqlSection = false;
+                if (!explanation && sqlSection && !row.equals("SQL EJECUTADO:")) {
+                    coloredSqlLine(5, 5 + i, row);
+                } else {
+                    line(5, 5 + i, row,
+                        row.endsWith(":") || row.equals("EXPLICACIÓN DE LA CONSULTA") ? YELLOW : WHITE);
+                }
             }
             screen.refresh();
             KeyStroke key = nextKey();
@@ -417,6 +432,23 @@ public final class ClassicTui implements AutoCloseable {
             if (type == KeyType.ArrowLeft) { current = Math.max(0, current - 1); scroll = 0; }
             if (type == KeyType.ArrowRight) { current = Math.min(entries.size() - 1, current + 1); scroll = 0; }
             if (ch == '2') { explanation = !explanation; scroll = 0; }
+        }
+    }
+
+    // Pintamos los elementos de SQL sin modificar la sentencia original.
+    private void coloredSqlLine(int x, int y, String source) {
+        int position = x;
+        for (SqlSyntax.Part part : SqlSyntax.tokenize(source)) {
+            TextColor color = switch (part.kind()) {
+                case KEYWORD -> SQL_KEYWORD;
+                case FUNCTION -> SQL_FUNCTION;
+                case STRING -> SQL_STRING;
+                case NUMBER -> SQL_NUMBER;
+                case COMMENT -> SQL_COMMENT;
+                default -> WHITE;
+            };
+            line(position, y, part.text(), color);
+            position += part.text().length();
         }
     }
 

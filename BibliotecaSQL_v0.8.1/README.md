@@ -1,4 +1,4 @@
-# BibliotecaSQL v0.8
+# BibliotecaSQL v0.8.1
 
 Aplicación didáctica de gestión bibliotecaria con Java 17, JDBC, PostgreSQL, Docker Compose y una interfaz clásica de texto mediante Lanterna.
 
@@ -49,3 +49,16 @@ El entorno de creación permite verificar Java 17 con un compilador y clases aux
 ## Datos
 
 La base `biblioteca_universitaria` conserva el conjunto académico. Los préstamos y devoluciones se permiten únicamente sobre `biblioteca_operativa`. No ejecute `docker compose down -v` sin respaldar previamente cualquier cambio: esa opción elimina el volumen de datos.
+
+
+## Modo didáctico: explicación y colores
+
+Dentro de una tabla, active el modo didáctico y pulse `3` para abrir el SQL registrado.
+Pulse `2` para alternar entre la consulta y una explicación. En los laboratorios se presenta
+la explicación del ejercicio; en las demás operaciones se describen los elementos SQL
+reconocibles en la sentencia. Las palabras reservadas aparecen en amarillo, las funciones
+en cian, las cadenas en verde, los números en naranja y los comentarios en gris.
+
+Los colores solo afectan a la presentación: las sentencias y los parámetros enviados a
+PostgreSQL permanecen iguales. Las explicaciones automáticas son orientativas y no
+sustituyen el análisis del plan de ejecución.
