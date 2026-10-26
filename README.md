@@ -6,6 +6,8 @@ BibliotecaSQL es un proyecto didáctico de **Java 17 + PostgreSQL + JDBC**. Su i
 
 > **Para estudiantes:** utilicen la rama `main` o la versión **v9.0.5** para ejecutar la aplicación. Las etiquetas anteriores se conservan para estudiar la evolución del software y pueden contener errores ya corregidos. El historial Git fue **reconstruido retrospectivamente** a partir de entregas conservadas; las fechas de los hitos no pretenden ser las fechas originales de publicación en GitHub. Consulte [HISTORIAL.md](HISTORIAL.md).
 
+**Documentación técnica vigente:** [índice de guías](docs/README.md) · [arquitectura](docs/01-arquitectura.md) · [modelo de datos](docs/02-modelo-de-datos.md) · [operaciones](docs/03-operaciones-y-reglas.md) · [laboratorio SQL](docs/04-laboratorio.md) · [interfaz y modo didáctico](docs/05-interfaz-y-modo-didactico.md) · [pruebas y mantenimiento](docs/06-pruebas-y-mantenimiento.md).
+
 ## 1. Qué aprenderá
 
 - Conectar una aplicación Java de consola a PostgreSQL mediante JDBC.
@@ -179,7 +181,7 @@ Active el modo didáctico con la tecla **`D` desde el menú principal**, ejecute
 
 Algunas explicaciones se basan en patrones detectados automáticamente: **consulte también el código fuente y los resultados reales**, ya que el visor no sustituye una revisión completa de la lógica SQL. Para mostrar el archivo Java original, inicie la aplicación desde la raíz del proyecto.
 
-**Secuencia sugerida:** abra un ejercicio A7, siga el recorrido desde la interfaz hacia el DAO; continúe con un `JOIN` de A8 y después con una subconsulta de A9. Observe cómo `ResultSet` se transforma en filas visibles.
+**Secuencia sugerida:** abra un ejercicio A7, siga el recorrido desde la interfaz hacia el DAO; continúe con un `JOIN` de A8 y después con una subconsulta de A9. Observe cómo `ResultSet` se transforma en filas visibles. Consulte la [guía del modo didáctico](docs/05-interfaz-y-modo-didactico.md).
 
 ## 8. Estructura del repositorio
 
@@ -195,11 +197,11 @@ biblioteca-sql-java/
 ├── database/                    # Esquema, datos y normalización
 ├── src/main/java/               # Interfaz, servicios, DAO, modelos
 ├── src/test/java/               # Pruebas automatizadas
-├── docs/                        # Guías técnicas y didácticas
+├── docs/                        # Índice y seis guías temáticas vigentes
 └── scripts/                     # Auditoría, pruebas y migraciones
 ```
 
-**Ruta de aprendizaje recomendada:** `src/main/java/edu/uv/biblioteca/Main.java` → clases de `ui` → `service` → `dao` → `config` y archivos de `database`. Consulte [docs/01-arquitectura.md](docs/01-arquitectura.md) y las guías de `docs/`.
+**Ruta de aprendizaje recomendada:** `src/main/java/edu/uv/biblioteca/Main.java` → clases de `ui` → `service` → `dao` → `config` y archivos de `database`. Consulte el [índice de documentación](docs/README.md) y la [guía de arquitectura](docs/01-arquitectura.md).
 
 ## 9. Ejecutar las pruebas y la auditoría SQL
 
@@ -225,7 +227,7 @@ Con Docker activo, ejecute:
 bash scripts/auditar-laboratorio.sh
 ```
 
-Este script ejecuta las 36 consultas mediante Java en modo de solo lectura. **Una consulta que se ejecuta sin error no es necesariamente correcta desde el punto de vista lógico:** deben revisarse los resultados y los objetivos del ejercicio. Consulte [docs/22-auditoria-laboratorio-sql.md](docs/22-auditoria-laboratorio-sql.md).
+Este script ejecuta las 36 consultas mediante Java en modo de solo lectura. **Una consulta que se ejecuta sin error no es necesariamente correcta desde el punto de vista lógico:** deben revisarse los resultados y los objetivos del ejercicio. Consulte [docs/04-laboratorio.md](docs/04-laboratorio.md).
 
 ## 10. Detener el proyecto y conservar los datos
 
@@ -244,7 +246,7 @@ mvn compile exec:java
 
 > **¡Atención!** `docker compose down -v` **elimina los volúmenes** asociados al proyecto y con ellos sus bases de datos locales. Úselo únicamente cuando desee borrar el entorno de laboratorio y ya haya respaldado cualquier dato importante.
 
-Si cambia el nombre de la carpeta del proyecto, Docker Compose puede utilizar **otro nombre de proyecto y crear otro volumen**, aunque sus datos anteriores sigan existiendo. Verifique `docker volume ls` antes de concluir que se perdieron. Consulte el apartado de migración del documento [docs/18-normalizacion-v9.md](docs/18-normalizacion-v9.md) si proviene de versiones anteriores a v9.
+Si cambia el nombre de la carpeta del proyecto, Docker Compose puede utilizar **otro nombre de proyecto y crear otro volumen**, aunque sus datos anteriores sigan existiendo. Verifique `docker volume ls` antes de concluir que se perdieron. Consulte el apartado de migración del documento [docs/02-modelo-de-datos.md](docs/02-modelo-de-datos.md) si proviene de versiones anteriores a v9.
 
 ## 11. Problemas frecuentes y soluciones
 
