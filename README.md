@@ -1,37 +1,29 @@
-# BibliotecaSQL — Sistema de gestión bibliotecaria en consola
+# BibliotecaSQL
 
-**Versión funcional de referencia: v9.0.5** · **Universidad Veracruzana** · Facultad de Negocios y Tecnologías, campus Ixtaczoquitlán.
+**Sistema didáctico de gestión bibliotecaria en consola**  
+**Versión de referencia: v9.0.5** · Facultad de Negocios y Tecnologías, campus Ixtaczoquitlán · Universidad Veracruzana
 
-BibliotecaSQL es un proyecto didáctico de **Java 17 + PostgreSQL + JDBC**. Su interfaz de texto, construida con **Lanterna**, recupera la apariencia de los entornos clásicos de desarrollo en DOS: fondo azul, ventanas con marcos, menús numéricos y navegación por teclado. Incluye catálogos, préstamos, devoluciones, reportes y un laboratorio SQL relacionado con las actividades A7, A8 y A9 de Bases de Datos.
+BibliotecaSQL es una aplicación Java que permite administrar libros, autores, categorías, editoriales y préstamos mediante una interfaz de texto. Utiliza PostgreSQL para el almacenamiento, JDBC para el acceso a los datos y Lanterna para presentar menús, tablas y ventanas en terminales de Windows, Linux y macOS.
 
-> **Para estudiantes:** utilicen la rama `main` o la versión **v9.0.5** para ejecutar la aplicación. Las etiquetas anteriores se conservan para estudiar la evolución del software y pueden contener errores ya corregidos. El historial Git fue **reconstruido retrospectivamente** a partir de entregas conservadas; las fechas de los hitos no pretenden ser las fechas originales de publicación en GitHub. Consulte [HISTORIAL.md](HISTORIAL.md).
+El proyecto acompaña la experiencia educativa de **Bases de Datos**. Reúne ejercicios de funciones SQL (A7), consultas con `JOIN` (A8) y subconsultas (A9), además de ejemplos de validación, normalización y transacciones. El código está disponible para su lectura y modificación con fines académicos.
 
-**Documentación técnica vigente:** [índice de guías](docs/README.md) · [arquitectura](docs/01-arquitectura.md) · [modelo de datos](docs/02-modelo-de-datos.md) · [operaciones](docs/03-operaciones-y-reglas.md) · [laboratorio SQL](docs/04-laboratorio.md) · [interfaz y modo didáctico](docs/05-interfaz-y-modo-didactico.md) · [pruebas y mantenimiento](docs/06-pruebas-y-mantenimiento.md).
+> **Versión que debe utilizarse en clase:** trabaje con la rama `main` o con la etiqueta `v9.0.5`. Las etiquetas anteriores se conservan para analizar el desarrollo histórico, pero pueden contener errores o funciones incompletas. El historial se reconstruyó retrospectivamente a partir de entregas conservadas; las fechas de sus hitos no deben confundirse con fechas originales de publicación en GitHub. Consulte [HISTORIAL.md](HISTORIAL.md).
 
-## 1. Qué aprenderá
+## 1. Requisitos
 
-- Conectar una aplicación Java de consola a PostgreSQL mediante JDBC.
-- Comprender las responsabilidades de interfaz, servicios, DAO y base de datos.
-- Utilizar `PreparedStatement`, `ResultSet` y transacciones (`COMMIT`/`ROLLBACK`).
-- Trabajar con relaciones, claves foráneas, búsquedas, agrupamiento, `JOIN` y subconsultas.
-- Examinar el SQL ejecutado y el código Java desde el **modo didáctico**.
-- Analizar cómo cambiaron la interfaz, el modelo de datos, las pruebas y las reglas de negocio entre versiones.
+La aplicación se ejecuta en una computadora con **Windows 10/11, macOS o Linux**. Se requiere conexión a Internet para descargar herramientas e instalar dependencias por primera vez.
 
-## 2. Requisitos antes de comenzar
-
-Se necesita una computadora con **Windows 10/11, Linux o macOS**, conexión a Internet durante la instalación y una terminal.
-
-| Herramienta | Requisito | ¿Para qué sirve? |
+| Herramienta | Versión o condición | Función |
 |---|---|---|
-| **Java JDK 17** | Recomendado: JDK 17 | Compilar y ejecutar la aplicación |
-| **Apache Maven** | Maven 3.x | Descargar dependencias y ejecutar Java y pruebas |
-| **Docker + Docker Compose** | Docker Desktop en Windows/macOS o Docker Engine con Compose Plugin en Linux | Iniciar PostgreSQL sin instalarlo directamente |
-| **Git** | Recomendado | Clonar el repositorio y consultar versiones |
-| **VS Code** | Opcional | Leer y modificar el código Java y SQL |
+| Java Development Kit (JDK) | **17** | Compilar y ejecutar Java |
+| Apache Maven | **3.x** | Gestionar dependencias, compilar y ejecutar pruebas |
+| Docker y Docker Compose | Instalación operativa | Ejecutar PostgreSQL en un contenedor |
+| Git | Recomendado | Descargar el código y estudiar su historial |
+| VS Code | Opcional | Examinar y modificar archivos Java, SQL y Markdown |
 
-Descargas oficiales: [JDK (Eclipse Temurin)](https://adoptium.net/temurin/releases/?version=17), [Maven](https://maven.apache.org/download.cgi), [Docker](https://docs.docker.com/get-docker/), [Git](https://git-scm.com/downloads) y [VS Code](https://code.visualstudio.com/). En VS Code resulta útil *Extension Pack for Java*.
+Fuentes de instalación: [Eclipse Temurin JDK 17](https://adoptium.net/temurin/releases/?version=17), [Maven](https://maven.apache.org/download.cgi), [Docker](https://docs.docker.com/get-docker/), [Git](https://git-scm.com/downloads) y [VS Code](https://code.visualstudio.com/). En VS Code puede instalar **Extension Pack for Java**.
 
-**Compruebe los requisitos** en la terminal:
+Compruebe que los programas estén disponibles desde la terminal:
 
 ```bash
 java -version
@@ -42,253 +34,224 @@ docker compose version
 git --version
 ```
 
-Debe poder ejecutar `java`, `javac`, `mvn` y `docker`. Si falta alguno, instálelo y **abra una terminal nueva**. En Windows asegúrese de que Docker Desktop esté **iniciado**; en Linux el servicio Docker debe estar funcionando y el usuario debe tener permisos para utilizarlo.
+### Consideraciones por sistema operativo
 
-### Indicaciones por sistema operativo
+**Windows.** Utilice PowerShell, Windows Terminal o la terminal de VS Code. Inicie Docker Desktop antes de ejecutar Compose. Para los scripts con extensión `.sh` utilice Git Bash o WSL; los comandos `docker compose` y `mvn` pueden ejecutarse directamente desde PowerShell.
 
-**Windows:** use **PowerShell** o la terminal integrada de VS Code. Instale Docker Desktop, JDK y Maven. Compruebe que los comandos anteriores funcionen. Para ejecutar scripts `.sh` use **Git Bash** o WSL; no intente ejecutarlos directamente en PowerShell. El proyecto Java se ejecuta con los mismos comandos `docker compose` y `mvn` en PowerShell.
+**macOS.** Inicie Docker Desktop. Si utiliza Homebrew, puede instalar Maven mediante `brew install maven`. Verifique que `java -version` corresponda a un JDK compatible, preferentemente JDK 17.
 
-**macOS:** instale Docker Desktop y el JDK 17. Si utiliza Homebrew, puede instalar Maven con `brew install maven` y Git con `brew install git`. Compruebe `mvn -version` y que Docker Desktop esté abierto. No se requieren teclas `Fn` para usar BibliotecaSQL.
+**Linux.** Instale OpenJDK 17, Maven, Git, Docker Engine y Compose Plugin según su distribución. Compruebe que el servicio Docker esté iniciado y que su cuenta disponga de los permisos necesarios para utilizarlo.
 
-**Linux:** instale OpenJDK 17, Maven, Git y Docker Engine con el complemento Compose mediante el gestor de paquetes de su distribución. Asegúrese de poder ejecutar `docker compose version`. Según su configuración, puede ser necesario configurar permisos del grupo `docker`; consulte la documentación de Docker antes de utilizar `sudo`.
+Si aparece `command not found` o «no se reconoce como un comando», instale la herramienta correspondiente, abra otra terminal y repita la comprobación.
 
-## 3. Obtener los archivos
+## 2. Obtener el proyecto
 
-**Opción A: clonar con Git (recomendada)**
+Se recomienda clonar el repositorio:
 
 ```bash
 git clone https://github.com/jgdiaz19/biblioteca-sql-java.git
 cd biblioteca-sql-java
 ```
 
-**Opción B: descargar ZIP desde GitHub:** abra el repositorio, seleccione **Code → Download ZIP**, extraiga el archivo y **abra una terminal dentro de la carpeta extraída**. También podrá descargar la versión oficial desde **Releases → v9.0.5**, cuando se haya publicado su Release.
+Como alternativa, utilice **Code → Download ZIP** en GitHub y extraiga su contenido. En ambos casos, **abra la terminal dentro de la carpeta que contiene `pom.xml` y `docker-compose.yml`**.
 
-**Importante:** ejecute todos los comandos siguientes desde la carpeta que contiene los archivos `pom.xml` y `docker-compose.yml`. No los ejecute dentro de `src` ni `database`.
+Si desea estudiar una versión histórica, consulte las [etiquetas del repositorio](https://github.com/jgdiaz19/biblioteca-sql-java/tags). Para ejecutar las prácticas habituales se recomienda mantener `main`.
 
-## 4. Iniciar PostgreSQL con Docker
+## 3. Preparar PostgreSQL
 
-1. Abra **Docker Desktop** (Windows/macOS) o compruebe que Docker Engine funciona (Linux).
-2. Abra una terminal en la carpeta del proyecto.
-3. Ejecute:
+Asegúrese de que Docker esté iniciado y ejecute desde la carpeta principal:
 
 ```bash
 docker compose up -d --wait
-```
-
-El primer inicio puede tardar más porque Docker debe descargar la imagen `postgres:17`. El proyecto crea un contenedor PostgreSQL y un volumen persistente de datos. El parámetro `-d` libera la terminal y `--wait` espera el estado de arranque/salud configurado en Compose.
-
-Verifique el resultado:
-
-```bash
 docker compose ps
 ```
 
-El servicio `postgres` debería aparecer iniciado y, una vez finalizada la comprobación, saludable (`healthy`). Consulte los últimos registros en caso de error:
+`up` crea o inicia los servicios definidos en `docker-compose.yml`; `-d` los deja en segundo plano y `--wait` espera su estado de ejecución o salud según la configuración. El servicio `postgres` dispone de una comprobación `healthcheck` con `pg_isready`.
 
-```bash
-docker compose logs --tail=80 postgres
-```
+En un volumen nuevo se crean dos bases:
 
-**Las bases creadas en un volumen nuevo son:**
+| Base de datos | Uso |
+|---|---|
+| `biblioteca_universitaria` | Conserva el esquema y los datos originales de las prácticas. No se utiliza para escritura desde la aplicación. |
+| `biblioteca_operativa` | Permite gestionar catálogos, préstamos, devoluciones y reportes; incluye categorías y editoriales normalizadas. |
 
-- `biblioteca_universitaria`: datos y esquema originales de prácticas A7–A9. No se utiliza para operaciones de escritura.
-- `biblioteca_operativa`: base normalizada que utiliza la aplicación, con catálogos, libros, préstamos y reportes.
-
-La base operativa contiene tablas `autores`, `categorias`, `editoriales`, `libros`, `usuarios`, `prestamos`, y la vista `libros_consulta`. En ella, `id_categoria` e `id_editorial` relacionan `libros` con los catálogos correspondientes.
-
-### Comprobar que PostgreSQL contiene los datos
+Compruebe la carga inicial:
 
 ```bash
 docker compose exec postgres psql -U admin -d biblioteca_operativa -c "SELECT COUNT(*) FROM libros;"
 docker compose exec postgres psql -U admin -d biblioteca_universitaria -c "SELECT COUNT(*) FROM libros;"
 ```
 
-En una instalación nueva del conjunto de datos de ejemplo, la base académica incluye **24 libros**. La base operativa puede cambiar cuando usted agregue o elimine registros. Puede inspeccionar las relaciones:
+El conjunto de ejemplo contiene inicialmente **24 libros**. La cantidad en `biblioteca_operativa` puede cambiar después de las operaciones del usuario.
+
+Para consultar los mensajes del contenedor:
 
 ```bash
-docker compose exec postgres psql -U admin -d biblioteca_operativa -c "SELECT id_libro, titulo, categoria, editorial FROM libros_consulta ORDER BY id_libro LIMIT 5;"
+docker compose logs --tail=80 postgres
 ```
 
-## 5. Ejecutar BibliotecaSQL
+**Importante:** los scripts de inicialización automática se ejecutan al crear un volumen nuevo. Un reinicio posterior no vuelve a insertar todos los datos.
 
-Con PostgreSQL iniciado y desde la **carpeta principal del repositorio**, ejecute:
+## 4. Iniciar BibliotecaSQL
+
+Con PostgreSQL activo, ejecute:
 
 ```bash
 mvn compile exec:java
 ```
 
-En la primera ejecución, Maven descarga automáticamente las bibliotecas necesarias (controlador JDBC, Lanterna y otras dependencias). Necesita acceso a Internet para esta descarga inicial. Cuando se abra la pantalla de bienvenida, pulse la tecla indicada para entrar al menú principal.
+Maven obtendrá las dependencias necesarias en la primera ejecución. Cuando aparezca la pantalla de presentación, presione una tecla para continuar.
 
-**Recomendaciones de visualización:** amplíe la terminal a **80 columnas × 24 filas o más**, use fuente monoespaciada y codificación UTF-8. La terminal integrada de VS Code puede funcionar, pero si los marcos, teclas o colores no se ven bien, pruebe **Windows Terminal**, **Terminal de macOS** o la terminal habitual de su distribución Linux.
+La interfaz se visualiza mejor en una terminal con **al menos 80 columnas y 24 filas**, fuente monoespaciada y codificación UTF-8. Si las flechas, los marcos o los colores no funcionan como se espera, utilice Windows Terminal, Terminal de macOS o una terminal Linux.
 
-### Si la conexión a PostgreSQL falla
+### Configuración de la conexión
 
-Verifique primero:
+De manera predeterminada, para una instalación local de laboratorio, se utilizan los siguientes valores:
 
-```bash
-docker compose ps
-docker compose logs --tail=80 postgres
-```
-
-Los valores de demostración configurados por defecto para **uso local** son:
-
-| Parámetro | Valor de ejemplo |
+| Parámetro | Valor |
 |---|---|
-| Servidor de PostgreSQL | `localhost` |
+| Servidor | `localhost` |
 | Puerto | `5432` |
-| Base para la aplicación | `biblioteca_operativa` |
+| Base de datos | `biblioteca_operativa` |
 | Usuario | `admin` |
-| Contraseña de laboratorio | `biblioteca_local` |
+| Contraseña de ejemplo | `biblioteca_local` |
 
-La aplicación lee `DB_URL`, `DB_USER` y `DB_PASSWORD` del entorno cuando es necesario. Esos datos son **solo para el laboratorio local**: no reutilice la contraseña de ejemplo en un servidor público ni suba contraseñas personales al repositorio.
+La aplicación puede leer las variables de entorno **`DB_URL`**, **`DB_USER`** y **`DB_PASSWORD`**. Estos valores son exclusivamente para prácticas locales: no utilice la contraseña de ejemplo en servidores públicos ni publique credenciales personales.
 
-## 6. Navegación de la interfaz
+## 5. Funciones de la aplicación
 
-BibliotecaSQL utiliza **teclas numéricas normales** para que funcione en laptops Windows, macOS y Linux, sin necesitar teclas de función.
+El menú principal reúne las siguientes operaciones:
 
-| Tecla | Acción habitual |
+| Opción | Función |
 |---|---|
-| `1`–`9` | Elegir una opción disponible en el menú o tabla actual |
-| `0` | Regresar |
-| `↑` / `↓` | Moverse entre registros u opciones |
-| `Enter` | Seleccionar un registro o abrir detalles |
-| `/` | Activar la búsqueda en tablas que la admiten |
-| `Backspace` | Borrar caracteres de la búsqueda |
-| `Page Up` / `Page Down` | Cambiar de bloque cuando esté disponible |
-| `Esc` | Cancelar o cerrar una ventana |
-| `D` en el menú principal | Activar/desactivar el modo didáctico |
+| 1 | Consultar, buscar y administrar libros |
+| 2 | Administrar autores, categorías y editoriales |
+| 3 | Consultar y gestionar préstamos activos |
+| 4 | Consultar estadísticas por categoría |
+| 5 | Registrar un préstamo |
+| 6 | Registrar una devolución |
+| 7 | Consultar préstamos vencidos |
+| 8 | Consultar el historial de préstamos por usuario |
+| 9 | Acceder al laboratorio SQL (A7, A8 y A9) |
+| D | Activar o desactivar el modo didáctico |
+| 0 | Salir |
 
-Las acciones disponibles **siempre aparecen al pie de cada pantalla**; consúltelas antes de pulsar una tecla. En catálogos y préstamos algunas pantallas muestran `4` para agregar, `5` para modificar y `6` para eliminar/devolver, según el módulo. Al borrar registros se solicita confirmación.
+La navegación utiliza números, flechas, `ENTER` y `ESC`, sin depender de teclas de función. Las acciones disponibles aparecen al pie de cada pantalla. En los catálogos, `4`, `5` y `6` corresponden generalmente a **agregar**, **modificar** y **eliminar**, respectivamente.
 
-### Operaciones que puede practicar
+Las ventanas de registro permiten elegir autores, categorías y editoriales existentes o incorporar nuevos valores. Los identificadores se administran internamente: el usuario selecciona los registros por sus nombres. Las fechas se muestran como **DD-MM-AAAA**.
 
-1. **Libros:** consultar, buscar, agregar, modificar y eliminar cuando las relaciones lo permitan; seleccionar autores, categorías y editoriales existentes o registrar nuevos desde el formulario.
-2. **Catálogos:** administrar autores, categorías y editoriales; observar qué ocurre al intentar eliminar un registro que tiene libros relacionados.
-3. **Préstamos:** registrar préstamos de usuarios existentes o nuevos; definir plazo en días, registrar devoluciones y consultar activos y vencidos.
-4. **Reportes:** estadísticas por categoría e historial de préstamos por usuario; `Enter` permite consultar detalles en los reportes correspondientes.
-5. **Laboratorio SQL (opción 9):** explorar **36 consultas** organizadas en A7 (funciones y agrupamiento), A8 (`JOIN`) y A9 (subconsultas).
+### Búsqueda de libros
 
-**Fechas:** la interfaz presenta las fechas en formato `DD-MM-AAAA`; PostgreSQL conserva el tipo `DATE`. No confunda *fecha del préstamo*, *fecha límite* y *devolución real*.
+La opción **2. Cambiar filtro** del catálogo alterna entre dos estrategias:
 
-## 7. Modo didáctico: ver SQL y Java
+- **Java, en memoria:** compara el texto de la búsqueda con una lista de libros previamente recuperada.
+- **PostgreSQL, mediante `ILIKE`:** vuelve a consultar la base con `PreparedStatement`.
 
-Active el modo didáctico con la tecla **`D` desde el menú principal**, ejecute una consulta y abra el visor didáctico desde la tabla de resultados usando la opción que se indica en pantalla (habitualmente `3`). Las vistas del visor permiten estudiar:
+Al cambiar de estrategia se limpia el término anterior. Esta comparación permite observar en qué capa se ejecuta el filtrado.
 
-1. **SQL ejecutado**, con resaltado de sintaxis.
-2. **Código Java** relacionado con la ejecución, también coloreado.
-3. **Explicación SQL**, que describe las operaciones presentes.
-4. **Explicación Java**, orientada a la preparación, ejecución y procesamiento del resultado.
+### Modo didáctico
 
-Algunas explicaciones se basan en patrones detectados automáticamente: **consulte también el código fuente y los resultados reales**, ya que el visor no sustituye una revisión completa de la lógica SQL. Para mostrar el archivo Java original, inicie la aplicación desde la raíz del proyecto.
+Active el modo con **D** desde el menú principal. En las pantallas que ofrecen **3. Ver SQL**, el visor permite consultar:
 
-**Secuencia sugerida:** abra un ejercicio A7, siga el recorrido desde la interfaz hacia el DAO; continúe con un `JOIN` de A8 y después con una subconsulta de A9. Observe cómo `ResultSet` se transforma en filas visibles. Consulte la [guía del modo didáctico](docs/05-interfaz-y-modo-didactico.md).
+1. La sentencia SQL ejecutada.
+2. El fragmento del código Java que la prepara.
+3. Una explicación de sus elementos SQL.
+4. Una explicación de las operaciones Java relacionadas.
 
-## 8. Estructura del repositorio
+Los fragmentos se muestran con resaltado de sintaxis. Para localizarlos correctamente, **ejecute Maven desde la raíz del repositorio**, donde se encuentra `src/main/java`. El visor es un apoyo para el estudio; sus explicaciones no sustituyen la lectura del código ni la comprobación de resultados.
 
-```text
-biblioteca-sql-java/
-├── README.md                    # Esta guía
-├── HISTORIAL.md                 # Cronología reconstruida
-├── ISSUES_PARA_GITHUB.md        # Tareas históricas para Issues
-├── PROJECTS_PLAN.md             # Organización del tablero
-├── pom.xml                      # Dependencias y ejecución Maven
-├── docker-compose.yml           # PostgreSQL de la aplicación
-├── docker-compose.test.yml      # PostgreSQL aislado para pruebas
-├── database/                    # Esquema, datos y normalización
-├── src/main/java/               # Interfaz, servicios, DAO, modelos
-├── src/test/java/               # Pruebas automatizadas
-├── docs/                        # Índice y seis guías temáticas vigentes
-└── scripts/                     # Auditoría, pruebas y migraciones
-```
+## 6. Laboratorio del segundo parcial
 
-**Ruta de aprendizaje recomendada:** `src/main/java/edu/uv/biblioteca/Main.java` → clases de `ui` → `service` → `dao` → `config` y archivos de `database`. Consulte el [índice de documentación](docs/README.md) y la [guía de arquitectura](docs/01-arquitectura.md).
+La opción **9** contiene **36 consultas**, organizadas de la siguiente forma:
 
-## 9. Ejecutar las pruebas y la auditoría SQL
+| Actividad | Contenidos | Ejercicios |
+|---|---|---|
+| A7 | Funciones escalares, agregación y agrupamiento | 12 |
+| A8 | Consultas con `JOIN` y relaciones entre tablas | 12 |
+| A9 | Subconsultas, consultas correlacionadas y operadores de conjunto | 12 |
 
-### Comprobar las clases y pruebas JUnit
+Los ejemplos corresponden a los **temas** de las actividades; no se afirma que reproduzcan literalmente todos los ejercicios numerados de los cuadernos originales.
 
-```bash
-mvn test
-```
-
-Algunas pruebas son de integración y requieren una base accesible y condiciones concretas. Para ejecutar la **batería aislada**, utilice **Git Bash o WSL (Windows)** o una terminal **macOS/Linux**:
-
-```bash
-bash scripts/probar-integracion.sh
-```
-
-Este script crea un **contenedor y volumen exclusivos de pruebas**, usa el puerto `55433` y los elimina al terminar. **No introduzca datos personales en ese entorno**, pues su volumen se borra al finalizar.
-
-### Ejecutar la auditoría de los 36 ejercicios SQL
-
-Con Docker activo, ejecute:
+La referencia de estudio está en [docs/04-laboratorio.md](docs/04-laboratorio.md). Para ejecutar una comprobación técnica de las 36 consultas, utilice:
 
 ```bash
 bash scripts/auditar-laboratorio.sh
 ```
 
-Este script ejecuta las 36 consultas mediante Java en modo de solo lectura. **Una consulta que se ejecuta sin error no es necesariamente correcta desde el punto de vista lógico:** deben revisarse los resultados y los objetivos del ejercicio. Consulte [docs/04-laboratorio.md](docs/04-laboratorio.md).
+En Windows, este script debe ejecutarse desde **Git Bash o WSL**. Una consulta que se ejecuta sin errores todavía puede requerir revisión de su resultado lógico.
 
-## 10. Detener el proyecto y conservar los datos
+## 7. Pruebas y conservación de datos
 
-Para finalizar Java utilice la opción **Salir** del menú. Después puede detener PostgreSQL:
+Para ejecutar las pruebas automatizadas:
+
+```bash
+mvn test
+```
+
+Algunas pruebas de integración se omiten cuando no se ha configurado `DB_TEST_URL`. Revise el resumen de Maven antes de concluir que PostgreSQL se ha probado satisfactoriamente.
+
+Para utilizar una instancia aislada de pruebas:
+
+```bash
+bash scripts/probar-integracion.sh
+```
+
+Este script utiliza el puerto **55433** y un volumen temporal propio, que elimina al finalizar. No debe apuntarse a la base de trabajo que desee conservar.
+
+Para detener PostgreSQL **sin borrar sus datos**:
 
 ```bash
 docker compose down
 ```
 
-Este comando **no elimina el volumen** de PostgreSQL. Si quiere reanudar el proyecto otro día:
+Para volver a trabajar, ejecute `docker compose up -d --wait` y después `mvn compile exec:java`.
 
-```bash
-docker compose up -d --wait
-mvn compile exec:java
+> **Precaución:** `docker compose down -v` elimina los volúmenes vinculados al proyecto y puede ocasionar la pérdida de los datos locales. No lo utilice sin respaldo. Cambiar el nombre de la carpeta del proyecto también puede cambiar el nombre del volumen de Compose.
+
+## 8. Problemas frecuentes
+
+| Situación | Comprobación recomendada |
+|---|---|
+| `mvn` no se encuentra | Instale Maven; verifique `mvn -version` y abra otra terminal. |
+| `java` o `javac` no se encuentran | Instale JDK 17 y compruebe las variables de entorno. |
+| Docker no responde | Inicie Docker Desktop o el servicio Docker Engine. |
+| El puerto `5432` está ocupado | Compruebe si existe otro PostgreSQL; ajuste el puerto y `DB_URL` cuando proceda. |
+| `Connection refused` | Revise `docker compose ps`, los registros del servicio y la URL JDBC. |
+| Fallo de contraseña | Compare las credenciales; cambiar `POSTGRES_PASSWORD` en un volumen ya inicializado no actualiza automáticamente la cuenta. |
+| La terminal presenta caracteres incorrectos | Utilice UTF-8, una fuente monoespaciada y una terminal compatible. |
+| No aparece el código Java en el visor | Ejecute el proyecto desde la carpeta principal. |
+| El contenido parece haber desaparecido tras cambiar de carpeta | Compruebe `docker volume ls`; no elimine volúmenes antes de identificar el anterior. |
+
+Para solicitar asistencia, indique el sistema operativo, el comando utilizado y el mensaje completo del error. No comparta contraseñas.
+
+## 9. Organización y documentación
+
+```text
+biblioteca-sql-java/
+├── README.md                 Guía de instalación y uso
+├── HISTORIAL.md              Evolución retrospectiva del sistema
+├── CONTRIBUIR.md             Procedimiento para proponer cambios
+├── pom.xml                   Configuración de Maven
+├── docker-compose.yml        PostgreSQL para la aplicación
+├── docker-compose.test.yml   PostgreSQL para pruebas
+├── database/                 Esquema, datos y normalización
+├── docs/                     Guías académicas y técnicas
+├── scripts/                  Auditoría, migración y pruebas
+└── src/
+    ├── main/java/            Código de la aplicación
+    └── test/java/            Pruebas automatizadas
 ```
 
-> **¡Atención!** `docker compose down -v` **elimina los volúmenes** asociados al proyecto y con ellos sus bases de datos locales. Úselo únicamente cuando desee borrar el entorno de laboratorio y ya haya respaldado cualquier dato importante.
+**Documentación vigente:** [índice de guías](docs/README.md), [arquitectura](docs/01-arquitectura.md), [modelo de datos](docs/02-modelo-de-datos.md), [reglas de negocio](docs/03-operaciones-y-reglas.md), [laboratorio SQL](docs/04-laboratorio.md), [interfaz y modo didáctico](docs/05-interfaz-y-modo-didactico.md), [pruebas](docs/06-pruebas-y-mantenimiento.md) y [referencia técnica del catálogo de libros](docs/07-catalogo-libros-java.md).
 
-Si cambia el nombre de la carpeta del proyecto, Docker Compose puede utilizar **otro nombre de proyecto y crear otro volumen**, aunque sus datos anteriores sigan existiendo. Verifique `docker volume ls` antes de concluir que se perdieron. Consulte el apartado de migración del documento [docs/02-modelo-de-datos.md](docs/02-modelo-de-datos.md) si proviene de versiones anteriores a v9.
+Para estudiar la evolución del sistema, consulte [HISTORIAL.md](HISTORIAL.md) y las [etiquetas de GitHub](https://github.com/jgdiaz19/biblioteca-sql-java/tags). Las tareas históricas están recopiladas en [ISSUES_PARA_GITHUB.md](ISSUES_PARA_GITHUB.md); la propuesta de seguimiento figura en [PROJECTS_PLAN.md](PROJECTS_PLAN.md).
 
-## 11. Problemas frecuentes y soluciones
+## 10. Uso académico y créditos
 
-| Problema | Qué revisar |
-|---|---|
-| `mvn: command not found` o `mvn no se reconoce` | Instale Maven 3 y abra una terminal nueva; compruebe `mvn -version` |
-| `java: command not found` | Instale JDK 17 y compruebe `java -version` y `javac -version` |
-| `Cannot connect to the Docker daemon` | Inicie Docker Desktop o el servicio Docker Engine |
-| El puerto `5432` ya está ocupado | Hay otro PostgreSQL o contenedor escuchando. Deténgalo o cambie el puerto publicado en Compose **y** `DB_URL` de Java |
-| `Connection refused` desde Java | Compruebe `docker compose ps`, la salud del contenedor y `DB_URL` |
-| Error de contraseña | Confirme `DB_USER`, `DB_PASSWORD` y las credenciales del contenedor. Cambiar solo `POSTGRES_PASSWORD` después del primer arranque **no cambia automáticamente** la contraseña almacenada en un volumen existente |
-| No aparece el menú o se dibujan mal los bordes | Amplíe la ventana; use terminal monoespaciada UTF-8; pruebe la terminal nativa del sistema |
-| Las flechas no responden | Pruebe Windows Terminal, Terminal de macOS o una terminal Linux; algunas consolas embebidas interpretan teclas de forma distinta |
-| El volumen parece vacío después de actualizar | Compruebe el nombre del proyecto Compose y `docker volume ls`; **no ejecute `down -v`** |
-| Un autor/categoría/editorial no puede eliminarse | Compruebe si existen libros relacionados; PostgreSQL protege la integridad referencial |
-| Maven no descarga dependencias | Revise Internet, proxy, certificados y acceso a Maven Central |
-| Un script `.sh` no se ejecuta en PowerShell | Ábralo con Git Bash o WSL y use `bash scripts/NOMBRE.sh` |
+Utilice únicamente datos ficticios. No modifique la base `biblioteca_universitaria` durante las actividades del curso ni publique credenciales.
 
-Para pedir ayuda, comparta **el comando ejecutado, el mensaje completo de error, el sistema operativo y la salida de `docker compose ps`**. No envíe contraseñas ni información personal.
+**Designed and Developed by JEGD**  
+Facultad de Negocios y Tecnologías, campus Ixtaczoquitlán  
+Universidad Veracruzana
 
-## 12. Estudiar la evolución del proyecto
-
-La reconstrucción contiene **21 versiones etiquetadas** desde `v0.1` hasta `v9.0.5`. Puede verlas en [Tags](https://github.com/jgdiaz19/biblioteca-sql-java/tags) y comparar versiones desde GitHub, por ejemplo:
-
-- [v0.1 → v0.7](https://github.com/jgdiaz19/biblioteca-sql-java/compare/v0.1...v0.7): arquitectura inicial e interfaz de texto.
-- [v0.7 → v0.8.2](https://github.com/jgdiaz19/biblioteca-sql-java/compare/v0.7...v0.8.2): visor SQL/Java didáctico.
-- [v0.8.6 → v9.0](https://github.com/jgdiaz19/biblioteca-sql-java/compare/v0.8.6...v9.0): normalización del modelo relacional.
-- [v9.0 → v9.0.5](https://github.com/jgdiaz19/biblioteca-sql-java/compare/v9.0...v9.0.5): catálogos, préstamos, reportes y laboratorios.
-
-Lea [HISTORIAL.md](HISTORIAL.md) antes de interpretar las fechas. El proceso de reconstrucción y las tareas están descritos en [ISSUES_PARA_GITHUB.md](ISSUES_PARA_GITHUB.md) y [PROJECTS_PLAN.md](PROJECTS_PLAN.md). Cuando el tablero de **GitHub Projects** esté publicado, se incorporará aquí su enlace directo.
-
-## 13. Reglas para trabajar en clase
-
-- Utilice **solo datos de prueba**, no información personal real de usuarios.
-- No cambie registros en `biblioteca_universitaria`: se necesitan para reproducir las actividades académicas.
-- Antes de modificar código, ejecute la versión de referencia y compruebe su funcionamiento.
-- Documente los cambios con comentarios simples y explique qué modificó y por qué.
-- Verifique resultados SQL, restricciones, manejo de errores y comportamiento visual.
-- **No publique secretos** ni archivos de configuración con credenciales personales.
-
----
-
-**Créditos:** *Designed and Developed by JEGD* · Facultad de Negocios y Tecnologías, campus Ixtaczoquitlán · Universidad Veracruzana.
-
-**Alcance:** software didáctico y de laboratorio; no está diseñado para operar una biblioteca real sin revisiones adicionales de seguridad, pruebas y privacidad.
+Este software fue desarrollado con fines de enseñanza y experimentación; requiere medidas adicionales de seguridad, privacidad, autorización y pruebas antes de considerarse apto para gestionar una biblioteca real.

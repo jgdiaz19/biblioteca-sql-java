@@ -1,31 +1,33 @@
 # Modelo de datos y normalización
 
-**Versión:** v9.0.5. La aplicación trabaja con **dos bases de datos independientes** para conservar los ejercicios originales y permitir operaciones de escritura.
+## 1. Bases de datos utilizadas
 
-## Dos bases y sus propósitos
+BibliotecaSQL mantiene dos bases independientes:
 
-| Base | Uso | Características |
+| Base | Propósito | Características |
 |---|---|---|
-| `biblioteca_universitaria` | Ejercicios académicos A7–A9 | Esquema original con `autores`, `libros`, `usuarios` y `prestamos` |
-| `biblioteca_operativa` | Aplicación BibliotecaSQL | Estructura normalizada, catálogos independientes, préstamos y reportes |
+| `biblioteca_universitaria` | Conservar los datos de las actividades originales | Tablas `autores`, `libros`, `usuarios` y `prestamos` |
+| `biblioteca_operativa` | Ejecutar las operaciones del sistema | Catálogos normalizados, préstamos, reportes y vista `libros_consulta` |
 
-El sistema se conecta por defecto a **`biblioteca_operativa`** y comprueba ese nombre antes de ciertas escrituras. No modifique la base académica durante las prácticas.
+La aplicación se conecta de manera predeterminada a **`biblioteca_operativa`**. La base académica debe mantenerse sin modificaciones para que los ejercicios con resultados esperados continúen siendo reproducibles.
 
-## Esquema relacional operativo
+## 2. Estructura relacional
 
-- `autores` (1) → (N) `libros`, mediante `id_autor`.
-- `categorias` (1) → (N) `libros`, mediante `id_categoria`.
-- `editoriales` (1) → (N) `libros`, mediante `id_editorial` (opcional).
-- `libros` (1) → (N) `prestamos`, mediante `id_libro`.
-- `usuarios` (1) → (N) `prestamos`, mediante `id_usuario`.
+En la base operativa se utilizan las siguientes relaciones:
 
-Cada fila de `libros` representa **un ejemplar**; no existe un campo que indique múltiples copias. El atributo `disponible` muestra si el ejemplar puede prestarse.
+- Un **autor** puede tener varios libros; cada libro referencia un autor mediante `id_autor`.
+- Una **categoría** puede agrupar varios libros; cada libro referencia una categoría mediante `id_categoria`.
+- Una **editorial** puede estar asociada con varios libros. `id_editorial` es opcional.
+- Un **usuario** puede tener varios préstamos; cada préstamo referencia un usuario.
+- Un **libro** puede aparecer en varios préstamos históricos, pero solo en uno activo a la vez.
 
-## Qué cambió con la normalización de v9
+Cada registro de `libros` representa **un ejemplar**. El proyecto no administra inventario con varias copias del mismo registro. El indicador `disponible` se actualiza durante los préstamos y las devoluciones.
 
-En la base original, `categoria` y `editorial` eran columnas de texto de `libros`. La migración creó `categorias(id_categoria, nombre)` y `editoriales(id_editorial, nombre)` y sustituyó el texto repetido por claves foráneas. Ambas tablas tienen controles para evitar nombres vacíos y duplicados que solo varían en mayúsculas.
+## 3. Normalización de categorías y editoriales
 
-Para presentar los nombres se creó la vista `libros_consulta`. Su lógica se basa en relaciones como:
+El esquema académico conserva `categoria` y `editorial` como texto en `libros`. En la base operativa, la versión v9 separó estos valores en las tablas `categorias` y `editoriales`. Esta decisión reduce la duplicación de nombres y permite administrar los catálogos sin modificar los libros individualmente.
+
+La vista `libros_consulta` presenta los nombres a partir de sus relaciones:
 
 ```sql
 SELECT
@@ -40,51 +42,44 @@ LEFT JOIN editoriales AS e
     ON e.id_editorial = l.id_editorial;
 ```
 
-`LEFT JOIN` conserva libros que no tienen editorial. La vista facilita las **consultas de lectura**; las altas y modificaciones se realizan sobre las tablas reales.
+El `LEFT JOIN` preserva libros sin editorial. Las tablas de categoría y editorial incluyen restricciones para nombres no vacíos e índices que impiden duplicados que solo difieren por el uso de mayúsculas.
 
-## Fechas de los préstamos
+La vista se utiliza para **consultar** información; las altas y modificaciones se realizan sobre las tablas originales, utilizando los identificadores correspondientes.
+
+## 4. Fechas de préstamo
+
+La tabla `prestamos` distingue tres campos:
 
 | Columna | Significado |
 |---|---|
-| `fecha_prestamo` | Día en que inicia el préstamo |
-| `fecha_devolucion` | **Fecha límite** acordada |
-| `fecha_devolucion_real` | Fecha en la que efectivamente se devuelve; `NULL` si permanece abierto |
+| `fecha_prestamo` | Fecha de inicio |
+| `fecha_devolucion` | Fecha límite acordada |
+| `fecha_devolucion_real` | Fecha efectiva de devolución, nula mientras el préstamo esté activo |
 
-PostgreSQL almacena las fechas como `DATE`, aunque la interfaz las presenta en formato **DD-MM-AAAA**.
+Las columnas se almacenan como `DATE` en PostgreSQL y se muestran en formato **DD-MM-AAAA** en la terminal.
 
-El script `database/04-conciliar.sql` ajusta la disponibilidad de los libros según los préstamos abiertos y crea un índice único parcial que evita dos préstamos activos simultáneos para un mismo libro.
+Un índice único parcial, `uq_prestamo_activo_libro`, impide que un libro tenga dos préstamos abiertos (`fecha_devolucion_real IS NULL`). El script de conciliación también establece el valor inicial de `disponible` según los préstamos registrados.
 
-## Scripts de inicialización
+## 5. Inicialización y migración
 
-Con un **volumen PostgreSQL nuevo**, Docker ejecuta `database/01-inicializar.sql`, que crea ambas bases. Los archivos utilizados son:
+En una instalación con volumen nuevo, `database/01-inicializar.sql` crea las dos bases y ejecuta los siguientes archivos:
 
 | Archivo | Función |
 |---|---|
-| `02-esquema.sql` | Crea las cuatro tablas originales y sus restricciones |
-| `03-datos.sql` | Inserta los datos de ejemplo |
-| `04-conciliar.sql` | Ajusta disponibilidad e índice de préstamo activo en la base operativa |
-| `05-normalizar-catalogos.sql` | Normaliza categorías y editoriales únicamente en la base operativa |
+| `02-esquema.sql` | Crear las tablas del modelo original |
+| `03-datos.sql` | Insertar los datos de ejemplo |
+| `04-conciliar.sql` | Conciliar disponibilidad e incorporar el índice de préstamo activo en la base operativa |
+| `05-normalizar-catalogos.sql` | Transformar categorías y editoriales en catálogos relacionados; solo en la base operativa |
 
-La inicialización automática **no se repite** al ejecutar `docker compose up` sobre un volumen ya existente.
+La inicialización automática ocurre al crear el volumen. Volver a ejecutar `docker compose up` **no restablece los datos** si el volumen ya existe.
 
-## Comprobar el esquema
-
-Desde la raíz del repositorio, con Docker iniciado:
+Para comprobar el contenido:
 
 ```bash
 docker compose exec postgres psql -U admin -d biblioteca_operativa -c "SELECT COUNT(*) FROM libros;"
 docker compose exec postgres psql -U admin -d biblioteca_operativa -c "SELECT titulo, categoria, editorial FROM libros_consulta LIMIT 5;"
-docker compose exec postgres psql -U admin -d biblioteca_universitaria -c "SELECT COUNT(*) FROM libros;"
 ```
 
-La carga de referencia contiene 24 libros. La base operativa puede mostrar más o menos según las operaciones realizadas.
+El conjunto de referencia incluye 24 libros. La cantidad en la base operativa puede cambiar tras altas y bajas.
 
-## Migración desde versiones anteriores
-
-La versión 9.0.5 recién instalada **no necesita migración manual**. Si conserva un volumen operativo anterior a v9, realice un respaldo, confirme que está utilizando el volumen correcto y, solo entonces, ejecute:
-
-```bash
-bash scripts/migrar-v9.sh
-```
-
-El script genera primero un respaldo con `pg_dump` y aplica la migración en `biblioteca_operativa`. Nunca use el script sobre `biblioteca_universitaria`, ni elimine el volumen para forzar una migración.
+**Migración desde versiones anteriores:** si se conserva un volumen anterior a v9, revise su esquema y cree un respaldo antes de ejecutar `bash scripts/migrar-v9.sh`. La instalación nueva de v9.0.5 ya incorpora la normalización y no necesita ese paso. Nunca ejecute la migración sobre `biblioteca_universitaria` ni elimine volúmenes para forzarla.
