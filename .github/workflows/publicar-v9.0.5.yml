@@ -1,0 +1,40 @@
+name: Publicar BibliotecaSQL v9.0.5
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/publicar-v9.0.5.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Recuperar el repositorio y sus etiquetas
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Comprobar la etiqueta y publicar la Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          git rev-parse --verify refs/tags/v9.0.5 >/dev/null
+          if gh release view v9.0.5 >/dev/null 2>&1; then
+            echo "La Release v9.0.5 ya existe; no se modifica."
+            exit 0
+          fi
+          gh release create v9.0.5 \
+            --verify-tag \
+            --title "BibliotecaSQL v9.0.5" \
+            --notes-file .github/release-notes/v9.0.5.md \
+            --latest
+          echo "Publicación completada: https://github.com/${GH_REPO}/releases/tag/v9.0.5"
