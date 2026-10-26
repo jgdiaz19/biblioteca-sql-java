@@ -30,6 +30,8 @@ Este registro reúne las versiones conservadas de BibliotecaSQL y los cambios qu
 | [v9.0.4](https://github.com/jgdiaz19/biblioteca-sql-java/tree/v9.0.4) | 25 oct. 2026 | Laboratorio de 36 consultas y script de auditoría SQL |
 | [v9.0.5](https://github.com/jgdiaz19/biblioteca-sql-java/tree/v9.0.5) | 25 oct. 2026 | Ajuste de identidad institucional, créditos y versión visible |
 
+Los hitos se registraron posteriormente en [GitHub Issues](https://github.com/jgdiaz19/biblioteca-sql-java/issues?q=is%3Aissue). Para consultar las tareas y sus versiones, utilice [ISSUES_PARA_GITHUB.md](ISSUES_PARA_GITHUB.md). La entrega de referencia para estudiantes se encuentra en la [Release v9.0.5](https://github.com/jgdiaz19/biblioteca-sql-java/releases/tag/v9.0.5).
+
 ## Cómo comparar dos etapas
 
 GitHub permite examinar una etiqueta y comparar su contenido con otra. Las comparaciones siguientes ilustran cambios de distinta naturaleza:
