@@ -1,43 +1,48 @@
-# Evolución de BibliotecaSQL
+# Historial de desarrollo de BibliotecaSQL
 
-Este repositorio contiene una **reconstrucción retrospectiva** de los paquetes de código conservados durante el desarrollo didáctico.
+Este registro reúne las versiones conservadas de BibliotecaSQL y los cambios que motivaron cada entrega. Su finalidad es permitir el análisis de la evolución del código, el modelo de datos, la interfaz y las pruebas.
 
-**Las fechas de los hitos describen cuándo se trabajaron o comentaron los cambios, no las fechas en que se crearon los commits en GitHub.** Los commits y etiquetas Git se generaron posteriormente a partir de los ZIP conservados. Los intervalos marcados son aproximados.
+**Procedencia de las fechas.** El historial Git fue reconstruido posteriormente a partir de paquetes de código y de los hitos documentados durante el trabajo. Las fechas de la tabla son referencias al periodo de desarrollo; **no corresponden necesariamente a la creación original de commits en GitHub**. Las fechas indicadas como intervalos son aproximadas.
 
-| Versión | Hito documentado | Cambios principales |
+## Versiones conservadas
+
+| Versión | Fecha o periodo del hito | Cambio documentado |
 |---|---|---|
-| [`v0.1`](../../releases/tag/v0.1) | 2026-10-18 | Primera conexión Java–PostgreSQL y consultas de biblioteca |
-| [`v0.2`](../../releases/tag/v0.2) | 2026-10-18 | Arquitectura por capas, menús y visualización didáctica |
-| [`v0.3`](../../releases/tag/v0.3) | 2026-10-18 | Préstamos, devoluciones y transacciones JDBC |
-| [`v0.4`](../../releases/tag/v0.4) | 2026-10-18/19 | Reportes y comentarios de código para estudiantes |
-| [`v0.5`](../../releases/tag/v0.5) | 2026-10-19 | Pruebas automatizadas y trazabilidad SQL |
-| [`v0.5.1`](../../releases/tag/v0.5.1) | 2026-10-19 | Corrección de inicialización PostgreSQL en Docker |
-| [`v0.6`](../../releases/tag/v0.6) | 2026-10-20 | Splash UV, colores y 21 consultas SQL |
-| [`v0.7`](../../releases/tag/v0.7) | 2026-10-20 | Interfaz Borland con Lanterna y búsqueda incremental |
-| [`v0.8`](../../releases/tag/v0.8) | 2026-10-20 | Captura SQL desde JDBC y documentación Java |
-| [`v0.8.1`](../../releases/tag/v0.8.1) | 2026-10-20 | Coloreado SQL y explicaciones |
-| [`v0.8.2`](../../releases/tag/v0.8.2) | 2026-10-20 | Código Java real, coloreado y cuatro vistas didácticas |
-| [`v0.8.3`](../../releases/tag/v0.8.3) | 2026-10-20 | Desplazamiento y apuntador del visor |
-| [`v0.8.4`](../../releases/tag/v0.8.4) | 2026-10-22 | CRUD de libros y préstamos con ventanas emergentes |
-| [`v0.8.5`](../../releases/tag/v0.8.5) | 2026-10-22 | Registro de autores desde formulario de libros |
-| [`v0.8.6`](../../releases/tag/v0.8.6) | 2026-10-22 | CRUD de autores y selectores de categorías/editoriales |
-| [`v9.0`](../../releases/tag/v9.0) | 2026-10-22 | Normalización de categorías y editoriales |
-| [`v9.0.1`](../../releases/tag/v9.0.1) | 2026-10-22 | Alta integrada de categorías/editoriales desde libros |
-| [`v9.0.2`](../../releases/tag/v9.0.2) | 2026-10-25 | Tablas unificadas y mejoras de préstamos activos |
-| [`v9.0.3`](../../releases/tag/v9.0.3) | 2026-10-25 | Fechas, plazos, historial y reportes de préstamos |
-| [`v9.0.4`](../../releases/tag/v9.0.4) | 2026-10-25 | 36 ejercicios y auditoría del laboratorio SQL |
-| [`v9.0.5`](../../releases/tag/v9.0.5) | 2026-10-25 | Identidad institucional y créditos del splash screen |
+| [v0.1](https://github.com/jgdiaz19/biblioteca-sql-java/tree/v0.1) | 18 oct. 2026 | Conexión inicial entre Java y PostgreSQL; consultas del caso Biblioteca |
+| [v0.2](https://github.com/jgdiaz19/biblioteca-sql-java/tree/v0.2) | 18 oct. 2026 | Separación de presentación, servicios y acceso a datos |
+| [v0.3](https://github.com/jgdiaz19/biblioteca-sql-java/tree/v0.3) | 18 oct. 2026 | Préstamos, devoluciones y transacciones JDBC |
+| [v0.4](https://github.com/jgdiaz19/biblioteca-sql-java/tree/v0.4) | 18–19 oct. 2026 | Reportes, laboratorio y documentación inicial del código |
+| [v0.5](https://github.com/jgdiaz19/biblioteca-sql-java/tree/v0.5) | 19 oct. 2026 | Pruebas automatizadas y trazabilidad de consultas |
+| [v0.5.1](https://github.com/jgdiaz19/biblioteca-sql-java/tree/v0.5.1) | 19 oct. 2026 | Corrección del script de inicialización de PostgreSQL en Docker |
+| [v0.6](https://github.com/jgdiaz19/biblioteca-sql-java/tree/v0.6) | 20 oct. 2026 | Presentación institucional y primer laboratorio ampliado |
+| [v0.7](https://github.com/jgdiaz19/biblioteca-sql-java/tree/v0.7) | 20 oct. 2026 | Interfaz de terminal con Lanterna y búsqueda incremental |
+| [v0.8](https://github.com/jgdiaz19/biblioteca-sql-java/tree/v0.8) | 20 oct. 2026 | Registro del SQL ejecutado desde JDBC |
+| [v0.8.1](https://github.com/jgdiaz19/biblioteca-sql-java/tree/v0.8.1) | 20 oct. 2026 | Resaltado de sintaxis SQL y explicaciones |
+| [v0.8.2](https://github.com/jgdiaz19/biblioteca-sql-java/tree/v0.8.2) | 20 oct. 2026 | Visualización de fragmentos Java y cuatro vistas didácticas |
+| [v0.8.3](https://github.com/jgdiaz19/biblioteca-sql-java/tree/v0.8.3) | 20 oct. 2026 | Navegación y desplazamiento en el visor |
+| [v0.8.4](https://github.com/jgdiaz19/biblioteca-sql-java/tree/v0.8.4) | 22 oct. 2026 | Formularios y operaciones de gestión de libros y préstamos |
+| [v0.8.5](https://github.com/jgdiaz19/biblioteca-sql-java/tree/v0.8.5) | 22 oct. 2026 | Alta de autores desde el registro de libros |
+| [v0.8.6](https://github.com/jgdiaz19/biblioteca-sql-java/tree/v0.8.6) | 22 oct. 2026 | Administración de autores y selección de categorías y editoriales |
+| [v9.0](https://github.com/jgdiaz19/biblioteca-sql-java/tree/v9.0) | 22 oct. 2026 | Normalización de categorías y editoriales en la base operativa |
+| [v9.0.1](https://github.com/jgdiaz19/biblioteca-sql-java/tree/v9.0.1) | 22 oct. 2026 | Alta transaccional de categorías y editoriales desde el libro |
+| [v9.0.2](https://github.com/jgdiaz19/biblioteca-sql-java/tree/v9.0.2) | 25 oct. 2026 | Tablas de catálogos y préstamos con navegación uniforme |
+| [v9.0.3](https://github.com/jgdiaz19/biblioteca-sql-java/tree/v9.0.3) | 25 oct. 2026 | Fechas, plazos, devoluciones e historial por usuario |
+| [v9.0.4](https://github.com/jgdiaz19/biblioteca-sql-java/tree/v9.0.4) | 25 oct. 2026 | Laboratorio de 36 consultas y script de auditoría SQL |
+| [v9.0.5](https://github.com/jgdiaz19/biblioteca-sql-java/tree/v9.0.5) | 25 oct. 2026 | Ajuste de identidad institucional, créditos y versión visible |
 
-## Cómo comparar el progreso
+## Cómo comparar dos etapas
 
-En GitHub elija **Code → Tags** y abra una versión. Use **Compare** para analizar los cambios entre versiones, por ejemplo `v0.7...v0.8.2` o `v9.0...v9.0.5`.
+GitHub permite examinar una etiqueta y comparar su contenido con otra. Las comparaciones siguientes ilustran cambios de distinta naturaleza:
 
-La etiqueta `v9.0.5` reproduce el paquete entregado de esa versión. La rama `main` añade esta documentación de publicación retrospectiva.
+- [v0.1 y v0.7](https://github.com/jgdiaz19/biblioteca-sql-java/compare/v0.1...v0.7): desarrollo desde la primera conexión hasta la interfaz clásica.
+- [v0.7 y v0.8.2](https://github.com/jgdiaz19/biblioteca-sql-java/compare/v0.7...v0.8.2): incorporación del visor de SQL y Java.
+- [v0.8.6 y v9.0](https://github.com/jgdiaz19/biblioteca-sql-java/compare/v0.8.6...v9.0): modificación del modelo relacional.
+- [v9.0 y v9.0.5](https://github.com/jgdiaz19/biblioteca-sql-java/compare/v9.0...v9.0.5): consolidación de catálogos, préstamos e informes.
 
-## Advertencia de versiones antiguas
+Al estudiar una diferencia, identifique primero el problema que se intentó resolver. Después revise qué archivos cambiaron, si fue necesario modificar la base de datos y qué comprobaciones se añadieron.
 
-Las etiquetas previas se conservan con fines pedagógicos e históricos: algunas contienen errores conocidos, dependencias iniciales o funcionalidades incompletas. **Para ejecutar el software utilice `v9.0.5`.**
+## Alcance del registro
 
-## Fechas y procedencia
+Las versiones antiguas se mantienen como evidencia de decisiones y correcciones. Algunas contienen problemas que motivaron las entregas siguientes; **no se recomiendan para ejecutar las prácticas actuales**. La referencia funcional de los estudiantes es `v9.0.5`.
 
-La primera versión se generó el domingo 18 de octubre de 2026, y la evolución siguió hasta el domingo 25. No debe presentarse esta reconstrucción como prueba de que GitHub registró los cambios originalmente en esas fechas.
+La rama `main` puede incorporar cambios posteriores en documentación y mantenimiento sin modificar la etiqueta histórica de la versión.

@@ -1,63 +1,78 @@
-# Arquitectura y recorrido del código
+# Arquitectura de BibliotecaSQL
 
-**Versión de referencia:** BibliotecaSQL v9.0.5.
+## 1. Organización general
 
-## Propósito
-
-Identificar las responsabilidades de cada clase y seguir una operación desde la interfaz de consola hasta PostgreSQL. El proyecto emplea **Java 17**, **JDBC**, **Lanterna** y una separación sencilla entre presentación, servicios, acceso a datos y modelos.
+BibliotecaSQL separa la presentación, las reglas de negocio y el acceso a los datos. Esta división facilita identificar dónde debe realizarse una modificación y evita mezclar el código de la interfaz con las sentencias SQL.
 
 ```text
-Main
-  └── ClassicTui (menús, teclado, formularios y tablas)
-        └── LibraryService (coordinación y validaciones)
-              ├── BookDao, AuthorDao, CatalogDao
-              ├── LoanDao, ReportDao, LabDao
-              └── LoanTransactionService (transacciones)
-                    └── JDBC / PostgreSQL
+Teclado y pantalla
+       │
+       ▼
+ClassicTui (interfaz de consola con Lanterna)
+       │
+       ▼
+LibraryService (coordinación y validación)
+       │
+       ├── BookDao, AuthorDao, CatalogDao
+       ├── LoanDao, ReportDao, LabDao
+       └── LoanTransactionService
+                    │
+                    ▼
+             JDBC / PostgreSQL
 ```
 
-## Clases principales
+El método `main()` de [`Main.java`](../src/main/java/edu/uv/biblioteca/Main.java) crea la conexión JDBC y prepara los objetos que necesita la aplicación. La configuración se obtiene mediante `DatabaseConfig.fromEnvironment()`.
 
-| Componente | Responsabilidad |
+## 2. Responsabilidades de las clases
+
+| Componente | Función |
 |---|---|
-| `Main.java` | Inicia el sistema, abre la conexión y construye los objetos necesarios |
-| `config/DatabaseConfig.java` | Lee la configuración JDBC del entorno |
-| `ui/ClassicTui.java` | Presenta ventanas, tablas, menús y formularios; interpreta las teclas |
-| `service/LibraryService.java` | Comprueba valores y coordina las operaciones de la aplicación |
-| `service/LoanTransactionService.java` | Valida y ejecuta préstamos, devoluciones y cancelaciones como transacciones |
-| `dao/BookDao.java` | Consultas y modificaciones de libros |
-| `dao/AuthorDao.java`, `CatalogDao.java` | Administración de autores, categorías y editoriales |
-| `dao/LoanDao.java`, `ReportDao.java` | Préstamos activos e informes |
-| `dao/LabDao.java` | Las 36 consultas del laboratorio A7–A9 |
-| `dao/SqlTrace.java` | Registra SQL ejecutado para estudiarlo desde el modo didáctico |
-| `ui/JavaSourceView.java` | Localiza fragmentos del archivo Java que preparó la consulta |
-| `model/` | Objetos `record` que transportan los valores entre capas |
+| `ui/ClassicTui.java` | Presentar menús, tablas, formularios y mensajes; procesar teclas |
+| `service/LibraryService.java` | Validar entradas y comunicar la interfaz con las operaciones de datos |
+| `service/LoanTransactionService.java` | Coordinar préstamos, devoluciones y cambios que requieren transacciones |
+| `dao/BookDao.java` | Ejecutar consultas y modificaciones del catálogo de libros |
+| `dao/AuthorDao.java`, `CatalogDao.java` | Administrar autores, categorías y editoriales |
+| `dao/LoanDao.java`, `ReportDao.java` | Consultar préstamos y elaborar reportes |
+| `dao/LabDao.java` | Contener y ejecutar las consultas de A7, A8 y A9 |
+| `model/` | Representar datos mediante tipos `record` de Java |
+| `dao/SqlTrace.java` | Registrar las sentencias JDBC ejecutadas para su estudio |
 
-`MenuController` y `ConsoleView` se conservan en el repositorio, pero **la interfaz actual invocada desde `Main` es `ClassicTui`**. Evite tomar las clases antiguas como punto de partida al estudiar v9.0.5.
+En el repositorio también existen `MenuController.java` y `ConsoleView.java`, procedentes de etapas anteriores. **La interfaz principal de v9.0.5 es `ClassicTui`**, que se instancia desde `Main.java`.
 
-## Ejemplo: consultar libros
+## 3. Recorrido de una consulta
 
-1. El usuario selecciona el catálogo en la consola.
-2. `ClassicTui.tableBooks()` solicita la lista al servicio.
-3. `LibraryService.listBooks()` delega en `BookDao.list()`.
-4. `BookDao` ejecuta una consulta mediante JDBC sobre la vista `libros_consulta`.
-5. Se recorre `ResultSet` para construir objetos `Book`; la interfaz presenta una tabla navegable.
+Cuando el usuario abre el catálogo, `ClassicTui.tableBooks()` solicita los registros mediante `LibraryService.listBooks()`. El servicio invoca `BookDao.list()`, que ejecuta la consulta SQL y transforma el `ResultSet` en una lista de objetos `Book`. Finalmente, `ClassicTui` presenta la tabla y administra la navegación.
 
-Para buscar, el catálogo permite comparar **filtrado en memoria Java** con **una consulta SQL parametrizada** mediante `ILIKE`. Revise ambos recorridos dentro de `ClassicTui.tableBooks()` y `BookDao`.
+El flujo de datos puede resumirse así:
 
-## Ejemplo: registrar un préstamo
+```text
+tableBooks() → listBooks() → BookDao.list() → PreparedStatement
+                                                │
+                                                ▼
+                                          PostgreSQL
+                                                │
+                                                ▼
+                                 ResultSet → List<Book> → Tabla
+```
 
-`ClassicTui.borrow()` permite seleccionar usuario y libro, y capturar el plazo. `LibraryService` invoca `LoanTransactionService`, que valida las reglas de negocio, bloquea los registros correspondientes, inserta el préstamo y cambia la disponibilidad del libro. `commit()` confirma ambos cambios; `rollback()` revierte la operación ante un error.
+La interfaz trabaja con objetos Java, no con filas JDBC. Así, un cambio en el formato visual no requiere modificar necesariamente la consulta SQL.
 
-Los DAO no deberían manejar teclas ni dibujar ventanas, y las clases de interfaz no deberían construir directamente toda la lógica SQL. Esta separación hace posible modificar una capa sin rehacer las demás.
+## 4. Operaciones que modifican datos
 
-## Guía de lectura de Java y JDBC
+Las operaciones de préstamo y devolución necesitan comprobar varias condiciones y actualizar más de una tabla. Por eso se realizan en `LoanTransactionService`, donde se emplean transacciones con `commit()` y `rollback()`.
 
-- Localice primero el método invocado desde la interfaz; identifique sus parámetros y valor de retorno.
-- En el DAO, distinga `prepareStatement()`, los métodos `setX()`, `executeQuery()` o `executeUpdate()`, y el recorrido de `ResultSet`.
-- Analice cómo `try-with-resources` cierra sentencias y resultados.
-- Para una operación de escritura, identifique dónde comienza y termina la transacción.
+En el registro de libros, `BookDao.saveWithSelections()` puede crear un autor, una categoría o una editorial y guardar el libro dentro de una misma transacción. El objetivo es evitar registros relacionados incompletos si falla alguna de las operaciones.
 
-**Actividad sugerida:** siga una búsqueda de libro con el modo didáctico, anote las clases participantes y explique por qué usar `PreparedStatement` es preferible a concatenar texto introducido por el usuario.
+## 5. Acceso a PostgreSQL mediante JDBC
 
-Este diseño simplifica el caso didáctico al compartir una conexión durante una sesión de consola; no representa una arquitectura multiusuario lista para producción.
+Las clases DAO utilizan principalmente `PreparedStatement` para preparar sentencias y enviar valores. Para consultar datos se emplea `executeQuery()`; para operaciones `UPDATE` o `DELETE`, `executeUpdate()`. Las consultas que utilizan `RETURNING` pueden devolver un `ResultSet` incluso después de un `INSERT`.
+
+El uso de `try-with-resources` permite cerrar `PreparedStatement` y `ResultSet` al finalizar sus bloques. `SqlTrace.prepare()` envuelve la preparación normal para registrar las sentencias ejecutadas cuando se activa su consulta didáctica.
+
+## 6. Ejercicio de lectura
+
+Localice `Main.java`, `ClassicTui.tableBooks()`, `LibraryService.listBooks()` y `BookDao.list()`. Anote qué recibe y devuelve cada método, identifique el punto donde se ejecuta SQL y explique por qué `BookDao` no necesita conocer la posición del cursor en la pantalla.
+
+La [guía del catálogo de libros](07-catalogo-libros-java.md) desarrolla este recorrido con fragmentos del código y con el registro, la modificación y la eliminación de libros.
+
+Esta arquitectura es una simplificación didáctica: la ejecución en consola utiliza una conexión durante la sesión y no incorpora por sí misma las medidas de una aplicación multiusuario de producción.

@@ -1,27 +1,33 @@
-# Plan de trabajo retrospectivo
+# Propuesta de seguimiento en GitHub Projects
 
-Registro preparado a partir de la evolución del proyecto. **Estos elementos no son issues de GitHub todavía**; pueden publicarse como tareas cerradas una vez revisados.
+El tablero de BibliotecaSQL debe ayudar a reconstruir **qué decisiones se tomaron y cómo se verificaron**, no solamente mostrar una sucesión de versiones. Este documento establece una organización para trasladar las tareas de [ISSUES_PARA_GITHUB.md](ISSUES_PARA_GITHUB.md) a GitHub Projects.
 
-Estado sugerido: **Completado históricamente (pendiente de comprobar en CI)**.
+## Organización recomendada
 
-| Tarea | Versiones | Resumen |
-|---|---|---|
-| Infraestructura Java + PostgreSQL | v0.1–v0.2 | Conexión JDBC, Maven, datos iniciales, menú y separación de capas. |
-| Transacciones de préstamo y devolución | v0.3–v0.4 | Validaciones de disponibilidad y rollback; casos de uso y reportes. |
-| Pruebas e inicialización Docker | v0.5–v0.5.1 | JUnit, base de pruebas y corrección del error 126 al inicializar PostgreSQL. |
-| Identidad UV y consola clásica | v0.6–v0.7 | Menús, splash UV, colores Borland y controles portables. |
-| Buscador incremental de catálogos | v0.7 | Filtrado Java y PostgreSQL con navegación por teclado. |
-| Modo didáctico SQL y Java | v0.8–v0.8.2 | Captura de SQL JDBC, explicación, fragmentos Java y coloreado de sintaxis. |
-| Desplazamiento del visor y listas | v0.8.3–v0.8.4 | Apuntador visible y navegación entre filas y fragmentos. |
-| CRUD de libros y préstamos | v0.8.4 | Formularios emergentes, selección visual y confirmaciones. |
-| Catálogo de autores y alta integrada | v0.8.5–v0.8.6 | Administración de autores y altas desde libros. |
-| Normalización de catálogos | v9.0–v9.0.1 | Claves foráneas, migración y formularios de selección/alta. |
-| Tablas unificadas y detalle de préstamos | v9.0.2–v9.0.3 | Búsqueda, fechas, plazos, devoluciones, estadísticas e historial. |
-| Ampliación y auditoría del laboratorio SQL | v9.0.4 | 36 ejercicios A7/A8/A9 y comprobación de solo lectura. |
-| Splash institucional y créditos | v9.0.5 | Corrección de textos y versión mostrada en pantalla. |
+Utilice una vista de tablero para el estado de trabajo y una vista de tabla para consultar versiones y evidencias.
 
-## Campos recomendados en GitHub Projects
+| Campo | Uso |
+|---|---|
+| Estado | Pendiente, En desarrollo, En revisión o Completado |
+| Tipo | Funcionalidad, Corrección, Documentación o Pruebas |
+| Módulo | Base de datos, Catálogos, Préstamos, Interfaz o Laboratorio SQL |
+| Versión | Etiqueta donde se incorporó el cambio |
+| Fecha del hito | Fecha aproximada respaldada por el historial |
+| Evidencia | Commit, comparación de etiquetas, prueba o revisión |
 
-`Estado` (Pendiente/En curso/Completado), `Versión`, `Módulo`, `Tipo` (Funcionalidad/Corrección/Documentación/Pruebas), `Fecha del hito` y `Evidencia`.
+**Importante:** una tarea implementada en una versión histórica no equivale necesariamente a una tarea verificada mediante pruebas integrales. Cuando no exista evidencia de ejecución real, consérvela en estado de revisión o abra una tarea específica de validación.
 
-El estado de una implementación histórica no equivale a una prueba de integración satisfactoria; registre validaciones pendientes como tareas abiertas.
+## Procedimiento para organizar el proyecto
+
+1. Cree un tablero denominado **BibliotecaSQL — Desarrollo y mantenimiento**.
+2. Registre los 13 hitos de [ISSUES_PARA_GITHUB.md](ISSUES_PARA_GITHUB.md) como tareas retrospectivas, o vincule los Issues correspondientes cuando existan.
+3. Asigne a cada tarea el tipo, el módulo y las versiones relacionadas.
+4. Incluya un enlace al commit o a la comparación de etiquetas para que sea posible examinar el cambio.
+5. Mantenga una sección de trabajo futuro separada de los hitos ya implementados.
+6. Publique el enlace del tablero en el README principal una vez que esté disponible.
+
+## Uso didáctico
+
+Los estudiantes pueden seleccionar una tarea, recuperar la versión anterior y explicar qué limitación presentaba. Después podrán comparar los archivos Java o SQL modificados y verificar si el cambio resolvió el problema identificado.
+
+Este procedimiento permite estudiar la trazabilidad de requisitos y la revisión de software sin presentar el historial reconstruido como si las tareas se hubieran registrado durante cada jornada original de desarrollo.

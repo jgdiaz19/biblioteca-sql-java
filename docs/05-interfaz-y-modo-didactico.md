@@ -1,73 +1,61 @@
-# Interfaz clásica y modo didáctico
+# Interfaz de consola y modo didáctico
 
-**Versión:** BibliotecaSQL v9.0.5. La capa de presentación utiliza **Lanterna**: una interfaz de texto con fondo azul, marcos de caracteres, ventanas emergentes, menús numéricos y búsqueda incremental.
+BibliotecaSQL utiliza **Lanterna** para construir una interfaz de texto con menús, marcos, tablas y ventanas emergentes. Su diseño recupera características de las aplicaciones de consola clásicas, pero evita depender de las teclas de función, que pueden requerir combinaciones adicionales en algunas laptops.
 
-## Menú principal
+## 1. Navegación
 
-| Tecla | Opción |
+| Tecla | Función habitual |
 |---|---|
-| `1` | Catálogo de libros |
-| `2` | Administración de autores, categorías y editoriales |
-| `3` | Préstamos activos |
-| `4` | Estadísticas por categoría |
-| `5` | Registrar préstamo |
-| `6` | Registrar devolución |
-| `7` | Préstamos vencidos |
-| `8` | Préstamos por usuario |
-| `9` | Laboratorios SQL |
-| `D` | Activar o desactivar el modo didáctico |
-| `0` | Salir |
+| `1` a `9` | Seleccionar una opción visible |
+| `0` | Regresar o salir del menú |
+| `↑`, `↓` | Cambiar de registro o línea |
+| `Page Up`, `Page Down` | Desplazarse por bloques |
+| `Home`, `End` | Ir al inicio o al final donde se admita |
+| `ENTER` | Abrir el registro o confirmar una selección |
+| `ESC` | Cancelar o cerrar una ventana |
+| `1` o `/` en tablas compatibles | Activar búsqueda incremental |
+| `D` en el menú principal | Activar o desactivar el modo didáctico |
 
-No se necesitan teclas de función ni combinaciones `Fn`, lo que permite utilizar el sistema en laptops con Windows, Linux o macOS.
+Las acciones son **contextuales**. Por ejemplo, en el catálogo de libros la tecla `4` inicia el alta, mientras que en el menú principal abre estadísticas. Las indicaciones al pie de la ventana establecen qué operación está disponible en cada momento.
 
-## Navegación y tablas
+El apuntador `▶` o `>` indica la selección. Las tablas pueden desplazarse cuando el contenido excede el espacio visible.
 
-- `1` o `/`: iniciar búsqueda en las tablas que la admiten.
-- `↑` y `↓`: mover el registro o la línea seleccionada.
-- `Page Up` y `Page Down`: avanzar o retroceder por bloques.
-- `Home` y `End`: ir a los extremos donde estén implementados.
-- `ENTER`: elegir un elemento o consultar el detalle.
-- `0` o `ESC`: regresar o cancelar, según el contexto.
-- `4`, `5`, `6`: agregar, modificar y eliminar en catálogos donde se presenten esas opciones.
+## 2. Búsqueda incremental de libros
 
-Las funciones se indican al pie de cada pantalla. La selección se señala mediante `▶` o `>` y las pantallas extensas incorporan indicadores de desplazamiento.
+El catálogo permite introducir caracteres y actualizar las coincidencias conforme se escribe. La opción **2. Cambiar filtro** alterna entre dos métodos:
 
-## Dos estrategias de búsqueda de libros
-
-En el catálogo de libros, **2. Cambiar filtro** alterna entre:
-
-| Modo | Cómo funciona |
+| Estrategia | Ejecución |
 |---|---|
-| Java / en memoria | Filtra objetos ya cargados, comparando cadenas |
-| PostgreSQL / ILIKE | Ejecuta otra consulta JDBC parametrizada con `ILIKE ?` |
+| Java / en memoria | La aplicación filtra una lista de objetos `Book` que ya cargó |
+| PostgreSQL / `ILIKE` | Java ejecuta otra consulta parametrizada para recuperar coincidencias |
 
-**Al cambiar de modo, el término de búsqueda se limpia** y se vuelve al catálogo completo. En los otros catálogos y reportes, la búsqueda incremental filtra los registros que ya están en memoria.
+El cambio de estrategia restablece el término de búsqueda y la selección. En autores, categorías, editoriales y otros reportes, el filtrado se realiza sobre las filas que están cargadas en memoria.
 
-**Ejercicio:** busque el mismo término de ambas formas, observe el modo didáctico y explique en cuál de los dos casos se ejecuta SQL durante la búsqueda.
+Se recomienda comparar ambos métodos en el código para identificar el costo de consultar nuevamente el SGBD y la diferencia entre procesar datos en Java y procesarlos mediante SQL.
 
-## Modo didáctico
+## 3. Contenido del modo didáctico
 
-Desde el menú principal, pulse `D` para activarlo. Ejecute una consulta y use `3. Ver SQL` en las pantallas que ofrezcan esta opción.
+Pulse `D` en el menú principal. Después de ejecutar una consulta, las pantallas que ofrecen `3. Ver SQL` permiten abrir el visor.
 
-| Tecla del visor | Vista |
+| Tecla del visor | Contenido |
 |---|---|
-| `1` | Sentencia SQL realmente ejecutada, con colores |
-| `2` | Fragmento de Java que prepara o ejecuta la sentencia, con colores |
+| `1` | Sentencia SQL ejecutada, con resaltado de sintaxis |
+| `2` | Fragmento del código Java relacionado |
 | `3` | Explicación SQL |
 | `4` | Explicación Java |
-| `←` / `→` | Cambiar entre sentencias ejecutadas |
-| `↑` / `↓` | Recorrer las líneas de la vista |
-| `Page Up` / `Page Down` | Avanzar o retroceder por bloques |
-| `0` / `ESC` | Cerrar el visor |
+| `←`, `→` | Cambiar entre las sentencias registradas |
+| `↑`, `↓` | Recorrer las líneas |
+| `Page Up`, `Page Down` | Avanzar por bloques |
+| `0`, `ESC` | Cerrar el visor |
 
-`SqlTrace` registra las sentencias cuando JDBC llama a `executeQuery`, `executeUpdate` o `execute` y conserva hasta **40 entradas**. Los parámetros se almacenan para la traza técnica, pero no aparecen como panel independiente en la interfaz.
+`SqlTrace` conserva hasta **40 sentencias** por recorrido. Identifica las consultas cuando JDBC invoca métodos como `executeQuery()` o `executeUpdate()`. Aunque la traza conserva parámetros técnicos, estos no aparecen como un panel independiente; los estudiantes pueden estudiar los métodos `setString()` y `setInt()` directamente en la vista Java.
 
-`JavaSourceView` busca el archivo original dentro de `src/main/java` y muestra un fragmento cercano a la ejecución. **Inicie Maven desde la raíz del repositorio** para que encuentre el código fuente. El fragmento no equivale necesariamente al método completo; abra el archivo indicado en VS Code si necesita más contexto.
+La clase `JavaSourceView` consulta archivos bajo `src/main/java`. Por eso debe ejecutarse Maven **desde la raíz del repositorio**. La pantalla muestra un fragmento contextual, no necesariamente el método completo.
 
-Las explicaciones se elaboran parcialmente a partir de patrones reconocidos por el programa. Son un apoyo, **no una verificación exhaustiva de la lógica SQL o Java**. El coloreado utiliza un analizador léxico ligero.
+Las explicaciones y el coloreado se basan en reglas de reconocimiento relativamente sencillas; sirven para orientar la lectura, pero no sustituyen un análisis técnico de la consulta.
 
-## Recomendaciones de terminal
+## 4. Requisitos de presentación
 
-Utilice una terminal de al menos **80 columnas × 24 filas**, fuente monoespaciada y UTF-8. Para dificultades con marcos, flechas o colores, pruebe Windows Terminal, Terminal de macOS o una terminal Linux en vez de la terminal integrada del IDE.
+Para mejorar la legibilidad se recomienda una terminal de **80 columnas por 24 filas como mínimo**, fuente monoespaciada y UTF-8. Cuando la terminal integrada del IDE no interprete adecuadamente las teclas o el dibujo de marcos, utilice una terminal nativa.
 
-El splash screen conserva el monograma ASCII UV, el nombre de la Facultad de Negocios y Tecnologías, campus Ixtaczoquitlán, la Universidad Veracruzana y los créditos **Designed and Developed by JEGD**. El monograma no sustituye al escudo institucional oficial.
+La pantalla de inicio muestra un monograma tipográfico de la UV, el nombre de la Facultad de Negocios y Tecnologías, campus Ixtaczoquitlán, y los créditos *Designed and Developed by JEGD*. El monograma no pretende sustituir al escudo oficial.
