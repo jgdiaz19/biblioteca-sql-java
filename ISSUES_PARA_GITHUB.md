@@ -1,29 +1,41 @@
-# Registro retrospectivo de tareas
+# Seguimiento de BibliotecaSQL mediante GitHub Issues
 
-Este archivo contiene una propuesta de **13 tareas históricas** derivadas de las versiones conservadas de BibliotecaSQL. Puede utilizarse para documentar el desarrollo mediante GitHub Issues. **No debe interpretarse como una lista de incidencias ya creadas en GitHub**.
+GitHub Issues reúne las tareas documentadas del desarrollo de BibliotecaSQL. Los **13 hitos históricos** se registraron después de reconstruir el historial del proyecto, por lo que su fecha de creación en GitHub no corresponde necesariamente a la fecha en que se desarrolló la funcionalidad.
 
-Cada tarea recoge el propósito del cambio y las versiones en que se incorporó. El hecho de que una función figure en una versión no acredita por sí solo que se hayan ejecutado todas las pruebas de integración.
+La información sobre los periodos originales se encuentra en [HISTORIAL.md](HISTORIAL.md). Las diferencias del código pueden comprobarse con las etiquetas que acompañan a cada tarea.
 
-| Nº | Tarea | Versiones relacionadas | Criterio de revisión |
+## Hitos implementados
+
+| Issue | Trabajo realizado | Versiones | Estado |
 |---|---|---|---|
-| 01 | Configuración inicial de Java y PostgreSQL | v0.1–v0.2 | Conexión JDBC, Maven y separación de capas |
-| 02 | Préstamos y devoluciones transaccionales | v0.3–v0.4 | Validación de disponibilidad y reversión de cambios |
-| 03 | Pruebas e inicialización de Docker | v0.5–v0.5.1 | Pruebas JUnit y corrección de arranque |
-| 04 | Interfaz institucional y terminal clásica | v0.6–v0.7 | Menús, splash y compatibilidad de teclado |
-| 05 | Búsqueda incremental de libros | v0.7 | Comparación de filtrado Java y PostgreSQL |
-| 06 | Visor didáctico de SQL y Java | v0.8–v0.8.2 | Trazas JDBC, fragmentos de código y explicaciones |
-| 07 | Desplazamiento de tablas y visor | v0.8.3–v0.8.4 | Selección visible y navegación por contenido extenso |
-| 08 | Operaciones de gestión de libros y préstamos | v0.8.4 | Formularios, validaciones y confirmaciones |
-| 09 | Administración de autores | v0.8.5–v0.8.6 | Alta integrada y edición del catálogo |
-| 10 | Normalización de categorías y editoriales | v9.0–v9.0.1 | Claves foráneas, vista y migración |
-| 11 | Reportes y plazos de préstamo | v9.0.2–v9.0.3 | Tablas, fechas, historial y devoluciones |
-| 12 | Ampliación del laboratorio SQL | v9.0.4 | 36 consultas y mecanismo de auditoría |
-| 13 | Identidad de la pantalla de inicio | v9.0.5 | Textos institucionales, créditos y versión |
+| [#4](https://github.com/jgdiaz19/biblioteca-sql-java/issues/4) | Configuración inicial de Java, JDBC y PostgreSQL | v0.1–v0.2 | Cerrado |
+| [#5](https://github.com/jgdiaz19/biblioteca-sql-java/issues/5) | Préstamos y devoluciones mediante transacciones | v0.3–v0.4 | Cerrado |
+| [#6](https://github.com/jgdiaz19/biblioteca-sql-java/issues/6) | Pruebas e inicialización de PostgreSQL con Docker | v0.5–v0.5.1 | Cerrado |
+| [#7](https://github.com/jgdiaz19/biblioteca-sql-java/issues/7) | Interfaz de consola e identidad institucional | v0.6–v0.7 | Cerrado |
+| [#8](https://github.com/jgdiaz19/biblioteca-sql-java/issues/8) | Búsqueda incremental de libros | v0.7 | Cerrado |
+| [#9](https://github.com/jgdiaz19/biblioteca-sql-java/issues/9) | Modo didáctico de SQL y Java | v0.8–v0.8.2 | Cerrado |
+| [#10](https://github.com/jgdiaz19/biblioteca-sql-java/issues/10) | Desplazamiento del visor y de las tablas | v0.8.3–v0.8.4 | Cerrado |
+| [#11](https://github.com/jgdiaz19/biblioteca-sql-java/issues/11) | Formularios y operaciones CRUD de libros | v0.8.4 | Cerrado |
+| [#12](https://github.com/jgdiaz19/biblioteca-sql-java/issues/12) | Registro de autores y administración del catálogo | v0.8.5–v0.8.6 | Cerrado |
+| [#13](https://github.com/jgdiaz19/biblioteca-sql-java/issues/13) | Normalización de categorías y editoriales | v9.0–v9.0.1 | Cerrado |
+| [#14](https://github.com/jgdiaz19/biblioteca-sql-java/issues/14) | Tablas de préstamos, fechas y reportes | v9.0.2–v9.0.3 | Cerrado |
+| [#15](https://github.com/jgdiaz19/biblioteca-sql-java/issues/15) | Ampliación del laboratorio a 36 consultas SQL | v9.0.4 | Cerrado |
+| [#16](https://github.com/jgdiaz19/biblioteca-sql-java/issues/16) | Presentación institucional de la versión final | v9.0.5 | Cerrado |
 
-## Recomendaciones para registrar una tarea
+El estado **Cerrado** significa que la implementación se encuentra representada en el código conservado. No equivale por sí mismo a una certificación completa de pruebas en todas las plataformas.
 
-La descripción de cada Issue debe incluir el **problema observado**, el **cambio previsto**, la **versión donde aparece** y la **evidencia disponible** (commit, comparación de etiquetas o prueba). Utilice una categoría como `mejora`, `corrección`, `documentación` o `pruebas` según corresponda.
+## Tareas abiertas
 
-Las tareas de este documento son retrospectivas. Al incorporarlas al tablero, márquelas como **implementadas históricamente** cuando la evidencia sea el código conservado; deje las validaciones pendientes como tareas abiertas. Esto evita confundir implementación con verificación satisfactoria.
+| Issue | Actividad pendiente |
+|---|---|
+| [#17](https://github.com/jgdiaz19/biblioteca-sql-java/issues/17) | Validar v9.0.5 en Windows, Linux y macOS |
+| [#18](https://github.com/jgdiaz19/biblioteca-sql-java/issues/18) | Revisar los resultados lógicos de las 36 consultas |
+| [#19](https://github.com/jgdiaz19/biblioteca-sql-java/issues/19) | Crear y vincular el tablero de GitHub Projects |
 
-Para consultar las fechas y el alcance de cada versión, utilice [HISTORIAL.md](HISTORIAL.md). El diseño del tablero se describe en [PROJECTS_PLAN.md](PROJECTS_PLAN.md).
+Puede consultar directamente los [Issues del repositorio](https://github.com/jgdiaz19/biblioteca-sql-java/issues?q=is%3Aissue). Para estudiar el desarrollo de una funcionalidad, abra el Issue correspondiente, consulte sus etiquetas de versión y compare los archivos modificados.
+
+## Relación con Releases y Projects
+
+La distribución oficial del software está disponible en [Releases — BibliotecaSQL v9.0.5](https://github.com/jgdiaz19/biblioteca-sql-java/releases/tag/v9.0.5).
+
+El plan para organizar estas tareas en un tablero se describe en [PROJECTS_PLAN.md](PROJECTS_PLAN.md). Hasta que el tablero quede creado y vinculado, los Issues constituyen la referencia de seguimiento disponible.

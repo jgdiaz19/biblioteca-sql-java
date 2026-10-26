@@ -9,6 +9,8 @@ El proyecto acompaña la experiencia educativa de **Bases de Datos**. Reúne eje
 
 > **Versión que debe utilizarse en clase:** trabaje con la rama `main` o con la etiqueta `v9.0.5`. Las etiquetas anteriores se conservan para analizar el desarrollo histórico, pero pueden contener errores o funciones incompletas. El historial se reconstruyó retrospectivamente a partir de entregas conservadas; las fechas de sus hitos no deben confundirse con fechas originales de publicación en GitHub. Consulte [HISTORIAL.md](HISTORIAL.md).
 
+**Descarga oficial:** [BibliotecaSQL v9.0.5 (Releases)](https://github.com/jgdiaz19/biblioteca-sql-java/releases/tag/v9.0.5). **Seguimiento:** [Issues implementados y pendientes](https://github.com/jgdiaz19/biblioteca-sql-java/issues?q=is%3Aissue). El tablero de Projects está [pendiente de vincular](https://github.com/jgdiaz19/biblioteca-sql-java/issues/19).
+
 ## 1. Requisitos
 
 La aplicación se ejecuta en una computadora con **Windows 10/11, macOS o Linux**. Se requiere conexión a Internet para descargar herramientas e instalar dependencias por primera vez.
@@ -244,7 +246,7 @@ biblioteca-sql-java/
 
 **Documentación vigente:** [índice de guías](docs/README.md), [arquitectura](docs/01-arquitectura.md), [modelo de datos](docs/02-modelo-de-datos.md), [reglas de negocio](docs/03-operaciones-y-reglas.md), [laboratorio SQL](docs/04-laboratorio.md), [interfaz y modo didáctico](docs/05-interfaz-y-modo-didactico.md), [pruebas](docs/06-pruebas-y-mantenimiento.md) y [referencia técnica del catálogo de libros](docs/07-catalogo-libros-java.md).
 
-Para estudiar la evolución del sistema, consulte [HISTORIAL.md](HISTORIAL.md) y las [etiquetas de GitHub](https://github.com/jgdiaz19/biblioteca-sql-java/tags). Las tareas históricas están recopiladas en [ISSUES_PARA_GITHUB.md](ISSUES_PARA_GITHUB.md); la propuesta de seguimiento figura en [PROJECTS_PLAN.md](PROJECTS_PLAN.md).
+Para estudiar la evolución del sistema, consulte [HISTORIAL.md](HISTORIAL.md), las [etiquetas de GitHub](https://github.com/jgdiaz19/biblioteca-sql-java/tags) y los [Issues del proyecto](https://github.com/jgdiaz19/biblioteca-sql-java/issues?q=is%3Aissue). La [relación documentada de tareas](ISSUES_PARA_GITHUB.md) enlaza cada hito con su Issue; el [plan de GitHub Projects](PROJECTS_PLAN.md) explica la organización prevista del tablero.
 
 ## 10. Uso académico y créditos
 
