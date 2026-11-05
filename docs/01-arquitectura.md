@@ -4,6 +4,8 @@
 
 BibliotecaSQL separa la presentación, las reglas de negocio y el acceso a los datos. Esta división facilita identificar dónde debe realizarse una modificación y evita mezclar el código de la interfaz con las sentencias SQL.
 
+**Listado 1.1. Diagrama del proceso: Organización general.**
+
 ```text
 Teclado y pantalla
        │
@@ -25,6 +27,8 @@ El método `main()` de [`Main.java`](../src/main/java/edu/uv/biblioteca/Main.jav
 
 ## 2. Responsabilidades de las clases
 
+**Tabla 1.1. Responsabilidades de las clases.**
+
 | Componente | Función |
 |---|---|
 | `ui/ClassicTui.java` | Presentar menús, tablas, formularios y mensajes; procesar teclas |
@@ -44,6 +48,8 @@ En el repositorio también existen `MenuController.java` y `ConsoleView.java`, p
 Cuando el usuario abre el catálogo, `ClassicTui.tableBooks()` solicita los registros mediante `LibraryService.listBooks()`. El servicio invoca `BookDao.list()`, que ejecuta la consulta SQL y transforma el `ResultSet` en una lista de objetos `Book`. Finalmente, `ClassicTui` presenta la tabla y administra la navegación.
 
 El flujo de datos puede resumirse así:
+
+**Listado 1.2. Diagrama del proceso: Recorrido de una consulta.**
 
 ```text
 tableBooks() → listBooks() → BookDao.list() → PreparedStatement
