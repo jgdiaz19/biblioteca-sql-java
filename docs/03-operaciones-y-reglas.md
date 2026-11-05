@@ -8,6 +8,8 @@ Desde **Catálogo de libros** se pueden consultar, buscar, agregar, modificar y 
 
 El flujo de guardado combina tres responsabilidades:
 
+**Tabla 3.1. Administración de libros y catálogos.**
+
 | Componente | Responsabilidad |
 |---|---|
 | `ClassicTui.editBook()` | Capturar los valores y solicitar confirmación |
@@ -23,6 +25,8 @@ La [referencia técnica del catálogo](07-catalogo-libros-java.md) permite segui
 ## 2. Registro de préstamos
 
 Antes de registrar un préstamo, `LoanTransactionService` comprueba que se cumplan las siguientes condiciones:
+
+**Tabla 3.2. Registro de préstamos.**
 
 | Condición | Regla |
 |---|---|
@@ -49,6 +53,8 @@ Para prevenir conflictos, el servicio utiliza bloqueos `SELECT ... FOR UPDATE` s
 En la implementación, `setAutoCommit(false)` agrupa los cambios; `commit()` los confirma y `rollback()` los deshace cuando aparece una excepción. La integridad no debe depender únicamente de las validaciones visibles en la terminal.
 
 ## 4. Reportes disponibles
+
+**Tabla 3.3. Reportes disponibles.**
 
 | Pantalla | Contenido |
 |---|---|
