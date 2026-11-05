@@ -12,6 +12,8 @@ Se recomienda haber revisado la [arquitectura](01-arquitectura.md) y el [modelo 
 
 ## 2. Archivos que intervienen
 
+**Tabla 7.1. Archivos que intervienen.**
+
 | Archivo | Responsabilidad |
 |---|---|
 | [`Main.java`](../src/main/java/edu/uv/biblioteca/Main.java) | Crea la conexión y los objetos de las distintas capas |
@@ -23,6 +25,8 @@ Se recomienda haber revisado la [arquitectura](01-arquitectura.md) y el [modelo 
 | [`SqlTrace.java`](../src/main/java/edu/uv/biblioteca/dao/SqlTrace.java) | Registra el SQL ejecutado para el modo didáctico |
 
 La comunicación habitual sigue esta secuencia:
+
+**Listado 7.1. Diagrama del proceso: Archivos que intervienen.**
 
 ```text
 Usuario
@@ -56,6 +60,8 @@ La aplicación utiliza `record`, incorporado al lenguaje Java para representar g
 
 El listado trabaja con cuatro campos:
 
+**Listado 7.2. Fragmento Java: Los modelos de datos en Java.**
+
 ```java
 public record Book(
     int id,
@@ -66,6 +72,8 @@ public record Book(
 ```
 
 El formulario necesita más información, por lo que utiliza `BookDetails`:
+
+**Listado 7.3. Fragmento Java: Los modelos de datos en Java.**
 
 ```java
 public record BookDetails(
@@ -92,6 +100,8 @@ El listado comienza cuando `ClassicTui.tableBooks()` llama a `service.listBooks(
 
 En `BookDao`, la consulta está definida mediante un bloque de texto de Java:
 
+**Listado 7.4. Fragmento Java: Consulta de todos los libros.**
+
 ```java
 public static final String LIST_SQL = """
     SELECT id_libro, titulo, categoria, disponible
@@ -103,6 +113,8 @@ public static final String LIST_SQL = """
 La sentencia lee la vista `libros_consulta`. Esta vista reúne los nombres de las categorías y editoriales con las claves foráneas de la tabla real `libros`. El listado solo necesita cuatro columnas y las obtiene en orden de identificador.
 
 Los métodos de acceso son:
+
+**Listado 7.5. Fragmento Java: Consulta de todos los libros.**
 
 ```java
 public List<Book> list() throws SQLException {
@@ -119,6 +131,8 @@ Ambos reutilizan el método privado `query()`. En el caso del listado, el segund
 ### ¿Cómo se transforma el resultado SQL en objetos Java?
 
 El método `query()` prepara la consulta, la ejecuta y recorre las filas devueltas:
+
+**Listado 7.6. Fragmento Java: ¿Cómo se transforma el resultado SQL en objetos Java.**
 
 ```java
 List<Book> books = new ArrayList<>();
@@ -139,6 +153,7 @@ try (PreparedStatement statement = SqlTrace.prepare(connection, sql)) {
         }
     }
 }
+
 return books;
 ```
 
@@ -161,12 +176,16 @@ El catálogo ofrece dos estrategias de búsqueda. En la terminal se alternan med
 
 Al abrir la pantalla, `tableBooks()` recupera la lista completa:
 
+**Listado 7.7. Fragmento Java: Filtrado en memoria.**
+
 ```java
 List<Book> complete = service.listBooks();
 List<Book> filtered = complete;
 ```
 
 En el modo Java, el término se compara con las propiedades de los objetos cargados:
+
+**Listado 7.8. Fragmento Java: Filtrado en memoria.**
 
 ```java
 String term = search.toLowerCase(Locale.ROOT);
@@ -184,6 +203,8 @@ Esta operación no realiza otra consulta a PostgreSQL por cada carácter. El fil
 
 En el modo SQL, el método `BookDao.search()` utiliza la siguiente sentencia:
 
+**Listado 7.9. Consulta SQL: Búsqueda en PostgreSQL.**
+
 ```sql
 SELECT
     id_libro,
@@ -198,6 +219,8 @@ ORDER BY titulo;
 `CONCAT_WS` reúne los campos de búsqueda; `ILIKE` permite coincidencias sin distinguir mayúsculas; y `?` representa un parámetro de `PreparedStatement`.
 
 El término se prepara de esta forma:
+
+**Listado 7.10. Fragmento Java: Búsqueda en PostgreSQL.**
 
 ```java
 public List<Book> search(String term) throws SQLException {
@@ -214,6 +237,8 @@ La concatenación de identificadores SQL no debe confundirse con la concatenaci�
 ## 6. Presentación y navegación en la terminal
 
 `ClassicTui.tableBooks()` administra las variables de búsqueda y selección:
+
+**Tabla 7.2. Presentación y navegación en la terminal.**
 
 | Variable | Función |
 |---|---|
@@ -237,6 +262,8 @@ La pantalla solicita autor, título, ISBN, año de publicación, categoría, edi
 
 Los datos se reúnen en `BookDetails` y se envían al servicio. Allí, `validateBook()` aplica las siguientes condiciones:
 
+**Tabla 7.3. Captura y validación de un libro.**
+
 | Campo | Validación principal |
 |---|---|
 | Título | Obligatorio; máximo 180 caracteres |
@@ -256,6 +283,8 @@ La unicidad del ISBN se protege además con la restricción `UNIQUE` de PostgreS
 
 El método utilizado por el formulario es:
 
+**Listado 7.11. Fragmento Java: Registro transaccional del libro.**
+
 ```java
 service.saveBookWithSelections(
     book,
@@ -268,6 +297,8 @@ service.saveBookWithSelections(
 En `LibraryService`, la operación valida el libro y, si corresponde, el autor. Después comprueba que la conexión se dirija a `biblioteca_operativa` e invoca `BookDao.saveWithSelections()`.
 
 El DAO realiza la operación dentro de una transacción:
+
+**Listado 7.12. Diagrama del proceso: Registro transaccional del libro.**
 
 ```text
 Inicio de transacción
@@ -292,12 +323,23 @@ El método auxiliar `ensureCatalog()` busca una categoría o editorial por nombr
 
 `BookDao.insert()` utiliza una sentencia equivalente a este fragmento del proyecto:
 
+**Listado 7.13. Consulta SQL: Inserción en PostgreSQL.**
+
 ```sql
 INSERT INTO libros (
-    titulo, isbn, anio_publicacion, id_categoria,
-    id_editorial, numero_paginas, precio, disponible, id_autor
+    titulo,
+    isbn,
+    anio_publicacion,
+    id_categoria,
+    id_editorial,
+    numero_paginas,
+    precio,
+    disponible,
+    id_autor
 )
-VALUES (?, ?, ?, ?, ?, ?, ?, TRUE, ?)
+VALUES (
+    ?, ?, ?, ?, ?, ?, ?, TRUE, ?
+)
 RETURNING id_libro;
 ```
 
@@ -319,6 +361,8 @@ La eliminación comienza cuando el usuario selecciona un libro y pulsa `6`. La p
 
 `BookDao.delete()` ejecuta:
 
+**Listado 7.14. Consulta SQL: Eliminación y restricciones de integridad.**
+
 ```sql
 DELETE FROM libros
 WHERE id_libro = ?;
@@ -331,6 +375,8 @@ Si el libro aparece en `prestamos`, aunque esos préstamos ya estén devueltos, 
 ## 11. Consultas relacionadas con las estadísticas
 
 Aunque el catálogo tiene su propia pantalla, `BookDao` también participa en los reportes por categoría. La consulta `STATS_SQL` utiliza:
+
+**Listado 7.15. Consulta SQL: Consultas relacionadas con las estadísticas.**
 
 ```sql
 SELECT
@@ -353,8 +399,15 @@ Se propone la siguiente secuencia de trabajo:
 3. Registre un libro con un autor y una categoría nuevos. Localice `editBook()`, `saveBookWithSelections()` y `saveWithSelections()`.
 4. Compruebe que el registro utiliza las claves foráneas esperadas:
 
+**Listado 7.16. Comandos de terminal: Cómo estudiar y comprobar el módulo.**
+
 ```bash
-docker compose exec postgres psql -U admin -d biblioteca_operativa -c "SELECT id_libro, titulo, categoria, editorial FROM libros_consulta ORDER BY id_libro DESC LIMIT 5;"
+docker compose exec postgres psql \
+  -U admin \
+  -d biblioteca_operativa \
+  -c "SELECT id_libro, titulo, categoria, editorial \
+      FROM libros_consulta \
+      ORDER BY id_libro DESC LIMIT 5;"
 ```
 
 5. Intente registrar el mismo ISBN con otro título y compruebe que el error no deja un autor o categoría sin libro.

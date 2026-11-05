@@ -6,13 +6,19 @@ Comprobar que BibliotecaSQL compila es distinto de verificar que sus operaciones
 
 Desde la carpeta del proyecto, con Docker iniciado:
 
+**Listado 6.1. Comandos de terminal: Comprobación inicial.**
+
 ```bash
 docker compose up -d --wait
+
 docker compose ps
+
 mvn compile exec:java
 ```
 
 Si PostgreSQL no inicia correctamente, revise los registros:
+
+**Listado 6.2. Comandos de terminal: Comprobación inicial.**
 
 ```bash
 docker compose logs --tail=80 postgres
@@ -24,6 +30,8 @@ La inicialización automática crea tablas y datos cuando el volumen es nuevo. R
 
 Para ejecutar las pruebas de Maven:
 
+**Listado 6.3. Comandos de terminal: Pruebas automatizadas.**
+
 ```bash
 mvn test
 ```
@@ -31,6 +39,8 @@ mvn test
 Las pruebas de integración requieren la variable `DB_TEST_URL` con una dirección específica. **Cuando no está configurada, pueden omitirse pruebas**; revise las cantidades ejecutadas y omitidas en `target/surefire-reports/`.
 
 Para probar transacciones y reglas de negocio sobre una instancia independiente:
+
+**Listado 6.4. Comandos de terminal: Pruebas automatizadas.**
 
 ```bash
 bash scripts/probar-integracion.sh
@@ -42,6 +52,8 @@ Entre los casos contemplados se encuentran el préstamo duplicado, el usuario in
 
 ## 3. Auditoría de las consultas SQL
 
+**Listado 6.5. Comandos de terminal: Auditoría de las consultas SQL.**
+
 ```bash
 bash scripts/auditar-laboratorio.sh
 ```
@@ -49,6 +61,8 @@ bash scripts/auditar-laboratorio.sh
 Esta auditoría recorre las 36 consultas del laboratorio con una conexión de solo lectura. Permite detectar errores de ejecución, pero no sustituye la revisión de los resultados esperados, especialmente al trabajar con `JOIN`, subconsultas, valores nulos y fechas.
 
 ## 4. Comprobaciones manuales
+
+**Tabla 6.1. Comprobaciones manuales.**
 
 | Caso | Comportamiento que debe observarse |
 |---|---|
@@ -68,11 +82,15 @@ Utilice registros ficticios. Cuando documente un error, conserve el comando util
 
 Para detener PostgreSQL sin borrar los datos:
 
+**Listado 6.6. Comandos de terminal: Volúmenes y respaldos.**
+
 ```bash
 docker compose down
 ```
 
 Si necesita conservar una copia lógica de la base operativa:
+
+**Listado 6.7. Comandos de terminal: Volúmenes y respaldos.**
 
 ```bash
 docker compose up -d --wait
@@ -82,6 +100,8 @@ docker compose exec -T postgres pg_dump -U admin -d biblioteca_operativa > respa
 **No utilice `docker compose down -v` sobre un entorno cuyos datos necesite conservar.** La opción `-v` elimina los volúmenes del proyecto. Si cambia el nombre de la carpeta, compruebe `docker volume ls` antes de asumir que se perdieron los registros.
 
 ## 6. Diagnóstico básico
+
+**Tabla 6.2. Diagnóstico básico.**
 
 | Problema | Revisión |
 |---|---|

@@ -6,6 +6,8 @@ El propósito del laboratorio es analizar una consulta completa: su objetivo, la
 
 ## A7. Funciones y procesamiento de conjuntos
 
+**Tabla 4.1. Funciones y procesamiento de conjuntos.**
+
 | Ejercicio | Consulta | Concepto principal |
 |---|---|---|
 | A7-01 | Texto: UPPER y LENGTH | Transformación de cadenas |
@@ -23,6 +25,8 @@ El propósito del laboratorio es analizar una consulta completa: su objetivo, la
 
 ## A8. Consultas entre tablas
 
+**Tabla 4.2. Consultas entre tablas.**
+
 | Ejercicio | Consulta | Concepto principal |
 |---|---|---|
 | A8-01 | INNER JOIN: libro y autor | Relación entre dos tablas |
@@ -39,6 +43,8 @@ El propósito del laboratorio es analizar una consulta completa: su objetivo, la
 | A8-12 | JOIN: préstamos vencidos | Relaciones y condiciones de fecha |
 
 ## A9. Subconsultas
+
+**Tabla 4.3. Subconsultas.**
 
 | Ejercicio | Consulta | Concepto principal |
 |---|---|---|
@@ -76,6 +82,8 @@ También debe analizarse la posición de los filtros cuando se utiliza `LEFT JOI
 ## Auditoría de ejecución
 
 Desde la raíz del repositorio, con Docker y Maven disponibles:
+
+**Listado 4.1. Comandos de terminal: Auditoría de ejecución.**
 
 ```bash
 bash scripts/auditar-laboratorio.sh
