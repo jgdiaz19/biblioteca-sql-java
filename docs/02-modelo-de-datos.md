@@ -4,6 +4,8 @@
 
 BibliotecaSQL mantiene dos bases independientes:
 
+**Tabla 2.1. Bases de datos utilizadas.**
+
 | Base | Propósito | Características |
 |---|---|---|
 | `biblioteca_universitaria` | Conservar los datos de las actividades originales | Tablas `autores`, `libros`, `usuarios` y `prestamos` |
@@ -29,6 +31,8 @@ El esquema académico conserva `categoria` y `editorial` como texto en `libros`.
 
 La vista `libros_consulta` presenta los nombres a partir de sus relaciones:
 
+**Listado 2.1. Consulta SQL: Normalización de categorías y editoriales.**
+
 ```sql
 SELECT
     l.id_libro,
@@ -50,6 +54,8 @@ La vista se utiliza para **consultar** información; las altas y modificaciones 
 
 La tabla `prestamos` distingue tres campos:
 
+**Tabla 2.2. Fechas de préstamo.**
+
 | Columna | Significado |
 |---|---|
 | `fecha_prestamo` | Fecha de inicio |
@@ -64,6 +70,8 @@ Un índice único parcial, `uq_prestamo_activo_libro`, impide que un libro tenga
 
 En una instalación con volumen nuevo, `database/01-inicializar.sql` crea las dos bases y ejecuta los siguientes archivos:
 
+**Tabla 2.3. Inicialización y migración.**
+
 | Archivo | Función |
 |---|---|
 | `02-esquema.sql` | Crear las tablas del modelo original |
@@ -74,6 +82,8 @@ En una instalación con volumen nuevo, `database/01-inicializar.sql` crea las do
 La inicialización automática ocurre al crear el volumen. Volver a ejecutar `docker compose up` **no restablece los datos** si el volumen ya existe.
 
 Para comprobar el contenido:
+
+**Listado 2.2. Comandos de terminal: Inicialización y migración.**
 
 ```bash
 docker compose exec postgres psql -U admin -d biblioteca_operativa -c "SELECT COUNT(*) FROM libros;"
