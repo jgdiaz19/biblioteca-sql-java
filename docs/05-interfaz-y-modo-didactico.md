@@ -4,6 +4,8 @@ BibliotecaSQL utiliza **Lanterna** para construir una interfaz de texto con men�
 
 ## 1. Navegación
 
+**Tabla 5.1. Navegación.**
+
 | Tecla | Función habitual |
 |---|---|
 | `1` a `9` | Seleccionar una opción visible |
@@ -24,6 +26,8 @@ El apuntador `▶` o `>` indica la selección. Las tablas pueden desplazarse cua
 
 El catálogo permite introducir caracteres y actualizar las coincidencias conforme se escribe. La opción **2. Cambiar filtro** alterna entre dos métodos:
 
+**Tabla 5.2. Búsqueda incremental de libros.**
+
 | Estrategia | Ejecución |
 |---|---|
 | Java / en memoria | La aplicación filtra una lista de objetos `Book` que ya cargó |
@@ -36,6 +40,8 @@ Se recomienda comparar ambos métodos en el código para identificar el costo de
 ## 3. Contenido del modo didáctico
 
 Pulse `D` en el menú principal. Después de ejecutar una consulta, las pantallas que ofrecen `3. Ver SQL` permiten abrir el visor.
+
+**Tabla 5.3. Contenido del modo didáctico.**
 
 | Tecla del visor | Contenido |
 |---|---|
